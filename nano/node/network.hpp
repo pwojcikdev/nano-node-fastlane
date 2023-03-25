@@ -5,10 +5,9 @@
 #include <nano/node/transport/tcp.hpp>
 #include <nano/secure/network_filter.hpp>
 
-#include <boost/thread/thread.hpp>
-
 #include <deque>
 #include <memory>
+#include <thread>
 #include <unordered_set>
 
 namespace nano
@@ -141,7 +140,7 @@ private:
 public:
 	std::function<void (nano::message const &, std::shared_ptr<nano::transport::channel> const &)> inbound;
 	boost::asio::ip::udp::resolver resolver;
-	std::vector<boost::thread> packet_processing_threads;
+	std::vector<std::thread> packet_processing_threads;
 	nano::peer_exclusion excluded_peers;
 	nano::tcp_message_manager tcp_message_manager;
 	nano::node & node;
