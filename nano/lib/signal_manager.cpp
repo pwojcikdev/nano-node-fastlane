@@ -10,7 +10,7 @@
 nano::signal_manager::signal_manager () :
 	work (boost::asio::make_work_guard (ioc))
 {
-	smthread = boost::thread ([&ioc = ioc] () {
+	smthread = std::thread ([&ioc = ioc] () {
 		ioc.run ();
 	});
 }
