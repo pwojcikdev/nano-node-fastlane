@@ -64,7 +64,9 @@ public:
 	void stop_event_processing ();
 	/** Wait for IO threads to complete */
 	void join ();
-	std::vector<boost::thread> threads;
+
+private:
+	std::vector<nano::thread> threads;
 	boost::asio::executor_work_guard<boost::asio::io_context::executor_type> io_guard;
 
 private:

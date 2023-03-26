@@ -78,15 +78,11 @@ int nano::thread::count_all ()
 nano::thread_runner::thread_runner (boost::asio::io_context & io_ctx_a, unsigned num_threads) :
 	io_guard (boost::asio::make_work_guard (io_ctx_a))
 {
-	boost::thread::attributes attrs;
-	nano::thread_attributes::set (attrs);
 	for (auto i (0u); i < num_threads; ++i)
 	{
-		threads.emplace_back (attrs, [this, &io_ctx_a] () {
-			nano::thread_role::set (nano::thread_role::name::io);
-
-			// In a release build, catch and swallow any exceptions,
-			// In debug mode let if fall through
+		threads.emplace_back (nano::thread_role::name::io, [this, &io_ctx_a] () {
+		// In a release build, catch and swallow any exceptions,
+		// In debug mode let if fall through
 
 #ifndef NDEBUG
 			run (io_ctx_a);
@@ -139,19 +135,21 @@ void nano::thread_runner::run (boost::asio::io_context & io_ctx_a)
 void nano::thread_runner::join ()
 {
 	io_guard.reset ();
-	for (auto & i : threads)
+	for (auto & thread : threads)
 	{
-		if (i.joinable ())
-		{
-			i.join ();
-		}
+		thread.join_or_pass ();
 	}
+	threads.clear ();
 }
 
 void nano::thread_runner::stop_event_processing ()
 {
 	io_guard.get_executor ().context ().stop ();
 }
+
+/*
+ * thread_pool
+ */
 
 nano::thread_pool::thread_pool (unsigned num_threads, nano::thread_role::name thread_name) :
 	num_threads (num_threads),
