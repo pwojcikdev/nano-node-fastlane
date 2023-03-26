@@ -8,10 +8,21 @@
 #include <iostream>
 #include <thread>
 
+/*
+ * thread_attributes
+ */
+
 void nano::thread_attributes::set (boost::thread::attributes & attrs)
 {
 	auto attrs_l (&attrs);
 	attrs_l->set_stack_size (8000000); // 8MB
+}
+
+boost::thread::attributes nano::thread_attributes::get_default ()
+{
+	boost::thread::attributes attrs;
+	attrs.set_stack_size (8000000); // 8MB
+	return attrs;
 }
 
 nano::thread_runner::thread_runner (boost::asio::io_context & io_ctx_a, unsigned num_threads) :

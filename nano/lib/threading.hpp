@@ -18,6 +18,7 @@ namespace nano
 namespace thread_attributes
 {
 	void set (boost::thread::attributes &);
+	boost::thread::attributes get_default ();
 }
 
 class thread_runner final
