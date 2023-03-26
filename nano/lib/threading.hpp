@@ -11,6 +11,7 @@
 
 #include <boost/thread/thread.hpp>
 
+#include <atomic>
 #include <thread>
 
 namespace nano
@@ -20,6 +21,38 @@ namespace thread_attributes
 	void set (boost::thread::attributes &);
 	boost::thread::attributes get_default ();
 }
+
+/**
+ * Encapsulates a thread primitive ensuring correct setup (name, stack size).
+ * Enables thread count tracking for testing.
+ * NOTE: Using `boost::thread` due to `std::thread`'s inability to set stack size.
+ */
+class thread final
+{
+public:
+	thread () = default;
+	thread (nano::thread_role::name role, std::function<void ()> func);
+	thread (thread const &) = delete;
+	thread (thread &&) = default;
+	thread & operator= (thread && other) = default;
+	~thread ();
+
+public:
+	void join ();
+	void join_or_pass ();
+	bool joinable () const;
+
+	/**
+	 * Returns the number of all threads (but only those spawned by this class) that are running.
+	 */
+	static int count_all ();
+
+private:
+	nano::thread_role::name role;
+	boost::thread underlying_thread;
+
+	static std::atomic<int> global_thread_counter;
+};
 
 class thread_runner final
 {

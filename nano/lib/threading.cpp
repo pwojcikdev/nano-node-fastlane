@@ -25,6 +25,56 @@ boost::thread::attributes nano::thread_attributes::get_default ()
 	return attrs;
 }
 
+/*
+ * thread
+ */
+
+std::atomic<int> nano::thread::global_thread_counter{ 0 };
+
+nano::thread::thread (nano::thread_role::name role_a, std::function<void ()> func) :
+	role{ role_a }
+{
+	underlying_thread = boost::thread{ nano::thread_attributes::get_default (),
+		[this, func = std::move (func)] () {
+			nano::thread_role::set (role);
+			func ();
+		} };
+
+	global_thread_counter++;
+}
+
+nano::thread::~thread ()
+{
+	global_thread_counter--;
+}
+
+void nano::thread::join ()
+{
+	underlying_thread.join ();
+}
+
+void nano::thread::join_or_pass ()
+{
+	if (underlying_thread.joinable ())
+	{
+		underlying_thread.join ();
+	}
+}
+
+bool nano::thread::joinable () const
+{
+	return underlying_thread.joinable ();
+}
+
+int nano::thread::count_all ()
+{
+	return global_thread_counter.load ();
+}
+
+/*
+ * thread_runner
+ */
+
 nano::thread_runner::thread_runner (boost::asio::io_context & io_ctx_a, unsigned num_threads) :
 	io_guard (boost::asio::make_work_guard (io_ctx_a))
 {
