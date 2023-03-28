@@ -5982,6 +5982,7 @@ TEST (rpc, simultaneous_calls)
 	nano::test::system system;
 	auto node = add_ipc_enabled_node (system);
 	nano::thread_runner runner (system.io_ctx, node->config.io_threads);
+	nano::test::start_stop_guard runner_guard{ runner };
 	nano::node_rpc_config node_rpc_config;
 	nano::ipc::ipc_server ipc_server (*node, node_rpc_config);
 	nano::rpc_config rpc_config{ nano::dev::network_params.network, nano::test::get_available_port (), true };

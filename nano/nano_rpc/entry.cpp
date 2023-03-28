@@ -79,6 +79,7 @@ void run (boost::filesystem::path const & data_path, std::vector<std::string> co
 			sigman.register_signal_handler (SIGTERM, &nano::signal_handler, false);
 
 			runner = std::make_unique<nano::thread_runner> (io_ctx, rpc_config.rpc_process.io_threads);
+			runner->start ();
 			runner->join ();
 
 			if (sig_int_or_term == 1)

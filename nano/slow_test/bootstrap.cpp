@@ -36,7 +36,7 @@ public:
 		rpc_config{ node.network_params.network, port, true },
 		ipc{ node, node_rpc_config },
 		ipc_rpc_processor{ system.io_ctx, rpc_config },
-		rpc{ system.io_ctx, rpc_config, ipc_rpc_processor }
+		rpc{ rpc_config, ipc_rpc_processor }
 	{
 	}
 
@@ -65,6 +65,7 @@ TEST (bootstrap_ascending, profile)
 {
 	nano::test::system system;
 	nano::thread_runner runner{ system.io_ctx, 2 };
+	nano::test::start_stop_guard runner_guard{ runner };
 	nano::networks network = nano::networks::nano_beta_network;
 	nano::network_params network_params{ network };
 

@@ -26,18 +26,25 @@ public:
 	thread_runner (boost::asio::io_context &, unsigned num_threads, nano::thread_role::name thread_role = nano::thread_role::name::io);
 	~thread_runner ();
 
-	/** Tells the IO context to stop processing events.*/
-	void stop_event_processing ();
-	/** Wait for IO threads to complete */
+	void start ();
+	void stop ();
+
+	/**
+	 * Needed for legacy code.
+	 * Disables work guard and waits until all threads finish their execution.
+	 */
 	void join ();
 
 private:
+	boost::asio::io_context & io_ctx;
+	unsigned const num_threads;
 	nano::thread_role::name const role;
+
 	std::vector<boost::thread> threads;
 	boost::asio::executor_work_guard<boost::asio::io_context::executor_type> io_guard;
 
 private:
-	void run (boost::asio::io_context &);
+	void run ();
 };
 
 class thread_pool final
@@ -81,5 +88,12 @@ unsigned int hardware_concurrency ();
 /**
  * If thread is joinable joins it, otherwise does nothing
  */
-bool join_or_pass (std::thread &);
+template <typename Thread>
+void join_or_pass (Thread & thread)
+{
+	if (thread.joinable ())
+	{
+		thread.join ();
+	}
+}
 }

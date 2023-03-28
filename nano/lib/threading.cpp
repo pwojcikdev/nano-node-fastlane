@@ -23,24 +23,36 @@ boost::thread::attributes nano::thread_attributes::get_default ()
  * thread_runner
  */
 
-nano::thread_runner::thread_runner (boost::asio::io_context & io_ctx_a, unsigned num_threads, const nano::thread_role::name thread_role_a) :
-	io_guard{ boost::asio::make_work_guard (io_ctx_a) },
-	role{ thread_role_a }
+nano::thread_runner::thread_runner (boost::asio::io_context & io_ctx_a, unsigned num_threads_a, const nano::thread_role::name thread_role_a) :
+	io_ctx{ io_ctx_a },
+	num_threads{ num_threads_a },
+	role{ thread_role_a },
+	io_guard{ boost::asio::make_work_guard (io_ctx_a) }
+{
+}
+
+nano::thread_runner::~thread_runner ()
+{
+	// All threads must be stopped before destruction
+	debug_assert (threads.empty ());
+}
+
+void nano::thread_runner::start ()
 {
 	for (auto i (0u); i < num_threads; ++i)
 	{
-		threads.emplace_back (nano::thread_attributes::get_default (), [this, &io_ctx_a] () {
+		threads.emplace_back (nano::thread_attributes::get_default (), [this] () {
 			nano::thread_role::set (role);
 
 			// In a release build, catch and swallow any exceptions,
 			// In debug mode let if fall through
 
 #ifndef NDEBUG
-			run (io_ctx_a);
+			run ();
 #else
 			try
 			{
-				run (io_ctx_a);
+				run ();
 			}
 			catch (std::exception const & ex)
 			{
@@ -54,15 +66,32 @@ nano::thread_runner::thread_runner (boost::asio::io_context & io_ctx_a, unsigned
 	}
 }
 
-nano::thread_runner::~thread_runner ()
+void nano::thread_runner::stop ()
 {
-	join ();
+	debug_assert (io_ctx.stopped ()); // Context should be stopped before the runner
+
+	io_guard.reset ();
+	for (auto & thread : threads)
+	{
+		nano::join_or_pass (thread);
+	}
+	threads.clear ();
 }
 
-void nano::thread_runner::run (boost::asio::io_context & io_ctx_a)
+void nano::thread_runner::join ()
+{
+	io_guard.reset ();
+	for (auto & thread : threads)
+	{
+		nano::join_or_pass (thread);
+	}
+	threads.clear ();
+}
+
+void nano::thread_runner::run ()
 {
 #if NANO_ASIO_HANDLER_TRACKING == 0
-	io_ctx_a.run ();
+	io_ctx.run ();
 #else
 	nano::timer<> timer;
 	timer.start ();
@@ -70,7 +99,7 @@ void nano::thread_runner::run (boost::asio::io_context & io_ctx_a)
 	{
 		timer.restart ();
 		// Run at most 1 completion handler and record the time it took to complete (non-blocking)
-		auto count = io_ctx_a.poll_one ();
+		auto count = io_ctx.poll_one ();
 		if (count == 1 && timer.since_start ().count () >= NANO_ASIO_HANDLER_TRACKING)
 		{
 			auto timestamp = std::chrono::duration_cast<std::chrono::microseconds> (std::chrono::system_clock::now ().time_since_epoch ()).count ();
@@ -81,23 +110,6 @@ void nano::thread_runner::run (boost::asio::io_context & io_ctx_a)
 		std::this_thread::yield ();
 	}
 #endif
-}
-
-void nano::thread_runner::join ()
-{
-	io_guard.reset ();
-	for (auto & i : threads)
-	{
-		if (i.joinable ())
-		{
-			i.join ();
-		}
-	}
-}
-
-void nano::thread_runner::stop_event_processing ()
-{
-	io_guard.get_executor ().context ().stop ();
 }
 
 /*
@@ -214,17 +226,4 @@ unsigned int nano::hardware_concurrency ()
 		return std::thread::hardware_concurrency ();
 	}
 	return value;
-}
-
-bool nano::join_or_pass (std::thread & thread)
-{
-	if (thread.joinable ())
-	{
-		thread.join ();
-		return true;
-	}
-	else
-	{
-		return false;
-	}
 }
