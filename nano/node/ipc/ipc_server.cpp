@@ -474,40 +474,25 @@ template <typename ACCEPTOR_TYPE, typename SOCKET_TYPE, typename ENDPOINT_TYPE>
 class socket_transport : public nano::ipc::transport
 {
 public:
-	socket_transport (nano::ipc::ipc_server & server_a, ENDPOINT_TYPE endpoint_a, nano::ipc::ipc_config_transport & config_transport_a, int concurrency_a) :
-		server (server_a), config_transport (config_transport_a)
+	socket_transport (nano::ipc::ipc_server & server_a, ENDPOINT_TYPE endpoint_a, nano::ipc::ipc_config_transport & config_transport_a) :
+		server (server_a),
+		config_transport (config_transport_a),
+		io_ctx{},
+		io_runner{ io_ctx, config_transport.io_threads, nano::thread_role::name::ipc_io }
 	{
-		// Using a per-transport event dispatcher?
-		if (concurrency_a > 0)
-		{
-			io_ctx = std::make_unique<boost::asio::io_context> ();
-		}
-
+		io_runner.start ();
 		boost::asio::socket_base::reuse_address option (true);
 		boost::asio::socket_base::keep_alive option_keepalive (true);
-		acceptor = std::make_unique<ACCEPTOR_TYPE> (context (), endpoint_a);
+		acceptor = std::make_unique<ACCEPTOR_TYPE> (io_ctx, endpoint_a);
 		acceptor->set_option (option);
 		acceptor->set_option (option_keepalive);
 		accept ();
-
-		// Start serving IO requests. If concurrency_a is < 1, the node's thread pool/io_context is used instead.
-		// A separate io_context for domain sockets may facilitate better performance on some systems.
-		if (concurrency_a > 0)
-		{
-			runner = std::make_unique<nano::thread_runner> (*io_ctx, static_cast<unsigned> (concurrency_a));
-			runner->start();
-		}
-	}
-
-	boost::asio::io_context & context () const
-	{
-		return io_ctx ? *io_ctx : server.node.io_ctx;
 	}
 
 	void accept ()
 	{
 		// Prepare the next session
-		auto new_session (std::make_shared<session<SOCKET_TYPE>> (server, context (), config_transport));
+		auto new_session (std::make_shared<session<SOCKET_TYPE>> (server, io_ctx, config_transport));
 
 		std::weak_ptr<nano::node> nano_weak = server.node.shared ();
 		acceptor->async_accept (new_session->get_socket (), [this, new_session, nano_weak] (boost::system::error_code const & ec) {
@@ -540,15 +525,8 @@ public:
 	void stop ()
 	{
 		acceptor->close ();
-		if (io_ctx)
-		{
-			io_ctx->stop ();
-		}
-
-		if (runner)
-		{
-			runner->join ();
-		}
+		io_ctx.stop ();
+		io_runner.stop ();
 	}
 
 	std::optional<std::uint16_t> listening_port () const;
@@ -556,8 +534,8 @@ public:
 private:
 	nano::ipc::ipc_server & server;
 	nano::ipc::ipc_config_transport & config_transport;
-	std::unique_ptr<nano::thread_runner> runner;
-	std::unique_ptr<boost::asio::io_context> io_ctx;
+	boost::asio::io_context io_ctx;
+	nano::thread_runner io_runner;
 	std::unique_ptr<ACCEPTOR_TYPE> acceptor;
 };
 
@@ -623,7 +601,7 @@ nano::ipc::ipc_server::ipc_server (nano::node & node_a, nano::node_rpc_config co
 			auto threads = node_a.config.ipc_config.transport_domain.io_threads;
 			file_remover = std::make_unique<dsock_file_remover> (node_a.config.ipc_config.transport_domain.path);
 			boost::asio::local::stream_protocol::endpoint ep{ node_a.config.ipc_config.transport_domain.path };
-			transports.push_back (std::make_shared<domain_socket_transport> (*this, ep, node_a.config.ipc_config.transport_domain, threads));
+			transports.push_back (std::make_shared<domain_socket_transport> (*this, ep, node_a.config.ipc_config.transport_domain));
 #else
 			node.logger.always_log ("IPC: Domain sockets are not supported on this platform");
 #endif
@@ -632,7 +610,7 @@ nano::ipc::ipc_server::ipc_server (nano::node & node_a, nano::node_rpc_config co
 		if (node_a.config.ipc_config.transport_tcp.enabled)
 		{
 			auto threads = node_a.config.ipc_config.transport_tcp.io_threads;
-			transports.push_back (std::make_shared<tcp_socket_transport> (*this, boost::asio::ip::tcp::endpoint (boost::asio::ip::tcp::v6 (), node_a.config.ipc_config.transport_tcp.port), node_a.config.ipc_config.transport_tcp, threads));
+			transports.push_back (std::make_shared<tcp_socket_transport> (*this, boost::asio::ip::tcp::endpoint (boost::asio::ip::tcp::v6 (), node_a.config.ipc_config.transport_tcp.port), node_a.config.ipc_config.transport_tcp));
 		}
 
 		node.logger.always_log ("IPC: server started");

@@ -2,6 +2,7 @@
 
 #include <nano/lib/config.hpp>
 #include <nano/lib/errors.hpp>
+#include <nano/lib/threading.hpp>
 
 #include <string>
 
@@ -18,7 +19,7 @@ namespace ipc
 		bool enabled{ false };
 		bool allow_unsafe{ false };
 		std::size_t io_timeout{ 15 };
-		long io_threads{ -1 };
+		unsigned io_threads{ std::max (nano::hardware_concurrency (), 4u) };
 	};
 
 	/**
