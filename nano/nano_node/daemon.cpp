@@ -139,7 +139,7 @@ void nano_daemon::daemon::run (boost::filesystem::path const & data_path, nano::
 				config.node.peering_port = network_params.network.default_node_port;
 			}
 
-			auto node (std::make_shared<nano::node> (io_ctx, data_path, config.node, opencl_work, flags));
+			auto node (std::make_shared<nano::node> (data_path, config.node, opencl_work, flags));
 			if (!node->init_error ())
 			{
 				auto network_label = node->network_params.network.get_current_network_as_string ();
@@ -221,7 +221,7 @@ void nano_daemon::daemon::run (boost::filesystem::path const & data_path, nano::
 #endif
 
 				runner = std::make_unique<nano::thread_runner> (io_ctx, node->config.io_threads);
-				runner->start();
+				runner->start ();
 				runner->join ();
 
 				if (sig_int_or_term == 1)

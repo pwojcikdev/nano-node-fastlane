@@ -69,8 +69,8 @@ outbound_bandwidth_limiter::config outbound_bandwidth_limiter_config (node_confi
 class node final : public std::enable_shared_from_this<nano::node>
 {
 public:
-	node (boost::asio::io_context &, uint16_t, boost::filesystem::path const &, nano::logging const &, nano::work_pool &, nano::node_flags = nano::node_flags (), unsigned seq = 0);
-	node (boost::asio::io_context &, boost::filesystem::path const &, nano::node_config const &, nano::work_pool &, nano::node_flags = nano::node_flags (), unsigned seq = 0);
+	node (uint16_t, boost::filesystem::path const &, nano::logging const &, nano::work_pool &, nano::node_flags = nano::node_flags (), unsigned seq = 0);
+	node (boost::filesystem::path const &, nano::node_config const &, nano::work_pool &, nano::node_flags = nano::node_flags (), unsigned seq = 0);
 	~node ();
 
 public:
@@ -143,10 +143,11 @@ public:
 	nano::telemetry_data local_telemetry () const;
 
 public:
-	nano::write_database_queue write_database_queue;
-	boost::asio::io_context & io_ctx;
-	boost::latch node_initialized_latch;
 	nano::node_config config;
+	boost::asio::io_context io_ctx;
+	nano::thread_runner io_runner;
+	nano::write_database_queue write_database_queue;
+	boost::latch node_initialized_latch;
 	nano::network_params & network_params;
 	nano::stats stats;
 	nano::thread_pool workers;
@@ -204,6 +205,7 @@ public:
 	std::chrono::steady_clock::time_point const startup_time;
 	std::chrono::seconds unchecked_cutoff = std::chrono::seconds (7 * 24 * 60 * 60); // Week
 	std::atomic<bool> unresponsive_work_peers{ false };
+	std::atomic<bool> started{ false };
 	std::atomic<bool> stopped{ false };
 	static double constexpr price_max = 16.0;
 	static double constexpr free_cutoff = 1024.0;
@@ -242,7 +244,6 @@ public:
 	~node_wrapper ();
 
 	nano::network_params network_params;
-	std::shared_ptr<boost::asio::io_context> io_context;
 	nano::work_pool work;
 	std::shared_ptr<nano::node> node;
 };

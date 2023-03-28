@@ -36,7 +36,7 @@ std::shared_ptr<nano::node> nano::test::system::add_node (nano::node_flags node_
 /** Returns the node added. */
 std::shared_ptr<nano::node> nano::test::system::add_node (nano::node_config const & node_config_a, nano::node_flags node_flags_a, nano::transport::transport_type type_a, std::optional<nano::keypair> const & rep)
 {
-	auto node (std::make_shared<nano::node> (io_ctx, nano::unique_path (), node_config_a, work, node_flags_a, node_sequence++));
+	auto node (std::make_shared<nano::node> (nano::unique_path (), node_config_a, work, node_flags_a, node_sequence++));
 	for (auto i : initialization_blocks)
 	{
 		auto result = node->ledger.process (node->store.tx_begin_write (), *i);
