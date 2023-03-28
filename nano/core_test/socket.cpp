@@ -418,6 +418,7 @@ TEST (socket, drop_policy)
 	auto node = inactivenode.node;
 
 	nano::thread_runner runner (node->io_ctx, 1);
+	runner.start ();
 
 	std::vector<std::shared_ptr<nano::transport::socket>> connections;
 
@@ -469,7 +470,8 @@ TEST (socket, drop_policy)
 	ASSERT_EQ (1, node->stats.count (nano::stat::type::tcp, nano::stat::detail::tcp_write_drop, nano::stat::dir::out));
 
 	node->stop ();
-	runner.stop_event_processing ();
+	node->io_ctx.stop();
+	runner.stop ();
 	runner.join ();
 }
 
@@ -485,6 +487,7 @@ TEST (socket, concurrent_writes)
 	// This gives more realistic execution than using system#poll, allowing writes to
 	// queue up and drain concurrently.
 	nano::thread_runner runner (node->io_ctx, 1);
+	runner.start ();
 
 	constexpr size_t max_connections = 4;
 	constexpr size_t client_count = max_connections;
@@ -595,7 +598,8 @@ TEST (socket, concurrent_writes)
 
 	ASSERT_FALSE (read_count_completion.await_count_for (10s));
 	node->stop ();
-	runner.stop_event_processing ();
+	node->io_ctx.stop();
+	runner.stop ();
 	runner.join ();
 
 	ASSERT_EQ (node->stats.count (nano::stat::type::tcp, nano::stat::detail::tcp_accept_success, nano::stat::dir::in), client_count);

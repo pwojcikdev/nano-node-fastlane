@@ -221,6 +221,7 @@ void nano_daemon::daemon::run (boost::filesystem::path const & data_path, nano::
 #endif
 
 				runner = std::make_unique<nano::thread_runner> (io_ctx, node->config.io_threads);
+				runner->start();
 				runner->join ();
 
 				if (sig_int_or_term == 1)
