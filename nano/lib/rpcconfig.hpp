@@ -73,6 +73,7 @@ class rpc_config final
 public:
 	explicit rpc_config (nano::network_constants & network_constants);
 	explicit rpc_config (nano::network_constants & network_constants, uint16_t, bool);
+
 	nano::error serialize_toml (nano::tomlconfig &) const;
 	nano::error deserialize_toml (nano::tomlconfig &);
 

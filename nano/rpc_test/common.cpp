@@ -76,12 +76,22 @@ void nano::test::test_response::run (uint16_t port_a)
 	});
 }
 
+/*
+ * rpc_context
+ */
+
 nano::test::rpc_context::rpc_context (std::shared_ptr<nano::rpc> & rpc_a, std::unique_ptr<nano::ipc::ipc_server> & ipc_server_a, std::unique_ptr<nano::ipc_rpc_processor> & ipc_rpc_processor_a, std::unique_ptr<nano::node_rpc_config> & node_rpc_config_a)
 {
 	rpc = std::move (rpc_a);
 	ipc_server = std::move (ipc_server_a);
 	ipc_rpc_processor = std::move (ipc_rpc_processor_a);
 	node_rpc_config = std::move (node_rpc_config_a);
+}
+
+nano::test::rpc_context::~rpc_context ()
+{
+	ipc_server->stop ();
+	rpc->stop ();
 }
 
 std::shared_ptr<nano::node> nano::test::add_ipc_enabled_node (nano::test::system & system, nano::node_config & node_config, nano::node_flags const & node_flags)
@@ -142,7 +152,7 @@ nano::test::rpc_context nano::test::add_rpc (nano::test::system & system, std::s
 	const auto ipc_tcp_port = ipc_server->listening_tcp_port ();
 	debug_assert (ipc_tcp_port.has_value ());
 	auto ipc_rpc_processor (std::make_unique<nano::ipc_rpc_processor> (system.io_ctx, rpc_config, ipc_tcp_port.value ()));
-	auto rpc (std::make_shared<nano::rpc> (system.io_ctx, rpc_config, *ipc_rpc_processor));
+	auto rpc (std::make_shared<nano::rpc> (rpc_config, *ipc_rpc_processor));
 	rpc->start ();
 
 	return rpc_context{ rpc, ipc_server, ipc_rpc_processor, node_rpc_config };
