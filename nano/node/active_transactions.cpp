@@ -101,7 +101,8 @@ void nano::active_transactions::block_cemented_callback (std::shared_ptr<nano::b
 				auto election = existing->second;
 				election_winner_details.erase (hash);
 				election_winners_lk.unlock ();
-				if (election->confirmed () && election->winner ()->hash () == hash)
+				
+				if (election && election->confirmed () && election->winner ()->hash () == hash)
 				{
 					nano::unique_lock<nano::mutex> election_lk{ election->mutex };
 					auto status_l = election->status;

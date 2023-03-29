@@ -630,7 +630,7 @@ void nano::node::start ()
 	// Ensure stop can only be called once
 	if (started.exchange (true))
 	{
-		debug_assert (false, "node::start() called multiple times");
+		debug_assert (false, "node started multiple times");
 		return;
 	}
 
@@ -721,7 +721,6 @@ void nano::node::stop ()
 	// Ensure stop can only be called once
 	if (stopped.exchange (true))
 	{
-		debug_assert (false, "node::stop() called multiple times");
 		return;
 	}
 

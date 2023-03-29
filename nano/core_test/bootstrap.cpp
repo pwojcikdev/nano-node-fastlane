@@ -1988,7 +1988,6 @@ TEST (bulk, offline_send)
 	ASSERT_TIMELY (10s, node2->balance (nano::dev::genesis_key.pub) != std::numeric_limits<nano::uint256_t>::max ());
 	// Receiving send block
 	ASSERT_TIMELY (20s, node2->balance (key2.pub) == node1->config.receive_minimum.number ());
-	node2->stop ();
 }
 
 // Test disabled because it's failing intermittently.
