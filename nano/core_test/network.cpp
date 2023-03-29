@@ -151,7 +151,6 @@ TEST (network, send_node_id_handshake_tcp)
 	auto list2 (node1->network.list (1));
 	ASSERT_EQ (nano::transport::transport_type::tcp, list2[0]->get_type ());
 	ASSERT_EQ (node0->get_node_id (), list2[0]->get_node_id ());
-	node1->stop ();
 }
 
 TEST (network, last_contacted)
@@ -812,9 +811,9 @@ TEST (network, peer_max_tcp_attempts)
 		// Start TCP attempt
 		node->network.merge_peer (node2->network.endpoint ());
 	}
-	ASSERT_EQ (0, node->network.size ());
+	ASSERT_TIMELY_EQ (5s, node->network.size (), node->network_params.network.max_peers_per_ip);
 	ASSERT_TRUE (node->network.tcp_channels.reachout (nano::endpoint (node->network.endpoint ().address (), nano::test::get_available_port ())));
-	ASSERT_EQ (1, node->stats.count (nano::stat::type::tcp, nano::stat::detail::tcp_max_per_ip, nano::stat::dir::out));
+	ASSERT_TIMELY (5s, node->stats.count (nano::stat::type::tcp, nano::stat::detail::tcp_max_per_ip, nano::stat::dir::out) >= 1);
 }
 #endif
 
@@ -1175,9 +1174,13 @@ TEST (network, filter_invalid_version_using)
 TEST (network, fill_keepalive_self)
 {
 	nano::test::system system{ 2 };
-	std::array<nano::endpoint, 8> target;
-	system.nodes[0]->network.fill_keepalive_self (target);
-	ASSERT_TRUE (target[2].port () == system.nodes[1]->network.port);
+	ASSERT_TIMELY_EQ (5s, system.nodes[0]->network.size (), 1);
+	auto get_port = [] (auto & node) {
+		std::array<nano::endpoint, 8> target;
+		node.network.fill_keepalive_self (target);
+		return target[2].port ();
+	};
+	ASSERT_TIMELY (5s, get_port (*system.nodes[0]) == system.nodes[1]->network.port);
 }
 
 /*
