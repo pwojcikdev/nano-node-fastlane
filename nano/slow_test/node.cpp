@@ -85,7 +85,7 @@ TEST (system, receive_while_synchronizing)
 		uint32_t count (1000);
 		system.generate_mass_activity (count, *system.nodes[0]);
 		nano::keypair key;
-		auto node1 (std::make_shared<nano::node> (system.io_ctx, nano::test::get_available_port (), nano::unique_path (), system.logging, system.work));
+		auto node1 (std::make_shared<nano::node> (nano::test::get_available_port (), nano::unique_path (), system.logging, system.work));
 		ASSERT_FALSE (node1->init_error ());
 		auto wallet (node1->wallets.create (1));
 		wallet->insert_adhoc (nano::dev::genesis_key.prv); // For voting
@@ -1649,7 +1649,7 @@ TEST (telemetry, many_nodes)
 		// Make a metric completely different for each node so we can check afterwards that there are no duplicates
 		node_config.bandwidth_limit = 100000 + i;
 
-		auto node = std::make_shared<nano::node> (system.io_ctx, nano::unique_path (), node_config, system.work, node_flags);
+		auto node = std::make_shared<nano::node> (nano::unique_path (), node_config, system.work, node_flags);
 		node->start ();
 		system.nodes.push_back (node);
 	}

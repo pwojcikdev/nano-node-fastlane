@@ -1159,7 +1159,7 @@ int main (int argc, char * const * argv)
 			flags.disable_legacy_bootstrap = true;
 			flags.disable_wallet_bootstrap = true;
 			flags.disable_bootstrap_listener = true;
-			auto node1 (std::make_shared<nano::node> (io_ctx1, path1, config1, work, flags, 0));
+			auto node1 (std::make_shared<nano::node> (path1, config1, work, flags, 0));
 			nano::block_hash genesis_latest (node1->latest (nano::dev::genesis_key.pub));
 			nano::uint128_t genesis_balance (std::numeric_limits<nano::uint128_t>::max ());
 			// Generating blocks
@@ -1245,7 +1245,7 @@ int main (int argc, char * const * argv)
 				config2.active_elections_size = daemon_config.node.active_elections_size;
 			}
 
-			auto node2 (std::make_shared<nano::node> (io_ctx2, path2, config2, work, flags, 1));
+			auto node2 (std::make_shared<nano::node> (path2, config2, work, flags, 1));
 			node2->start ();
 			nano::thread_runner runner2 (io_ctx2, node2->config.io_threads);
 			std::cout << boost::str (boost::format ("Processing %1% blocks (test node)\n") % (count * 2));

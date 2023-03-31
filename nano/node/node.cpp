@@ -139,16 +139,17 @@ nano::keypair nano::load_or_create_node_id (boost::filesystem::path const & appl
 	}
 }
 
-nano::node::node (boost::asio::io_context & io_ctx_a, uint16_t peering_port_a, boost::filesystem::path const & application_path_a, nano::logging const & logging_a, nano::work_pool & work_a, nano::node_flags flags_a, unsigned seq) :
-	node (io_ctx_a, application_path_a, nano::node_config (peering_port_a, logging_a), work_a, flags_a, seq)
+nano::node::node (uint16_t peering_port_a, boost::filesystem::path const & application_path_a, nano::logging const & logging_a, nano::work_pool & work_a, nano::node_flags flags_a, unsigned seq) :
+	node (application_path_a, nano::node_config (peering_port_a, logging_a), work_a, flags_a, seq)
 {
 }
 
-nano::node::node (boost::asio::io_context & io_ctx_a, boost::filesystem::path const & application_path_a, nano::node_config const & config_a, nano::work_pool & work_a, nano::node_flags flags_a, unsigned seq) :
+nano::node::node (boost::filesystem::path const & application_path_a, nano::node_config const & config_a, nano::work_pool & work_a, nano::node_flags flags_a, unsigned seq) :
+	config{ config_a },
+	io_ctx{},
+	io_runner{ io_ctx, config.io_threads, nano::thread_role::name::io },
 	write_database_queue (!flags_a.force_use_write_database_queue && (config_a.rocksdb_config.enable)),
-	io_ctx (io_ctx_a),
 	node_initialized_latch (1),
-	config (config_a),
 	network_params{ config.network_params },
 	stats (config.stats_config),
 	workers (std::max (3u, config.io_threads / 4), nano::thread_role::name::worker),
@@ -472,11 +473,12 @@ nano::node::node (boost::asio::io_context & io_ctx_a, boost::filesystem::path co
 
 nano::node::~node ()
 {
+	debug_assert (stopped); // Must be stopped before destruction
+
 	if (config.logging.node_lifetime_tracing ())
 	{
 		logger.always_log ("Destructing node");
 	}
-	stop ();
 }
 
 void nano::node::do_rpc_callback (boost::asio::ip::tcp::resolver::iterator i_a, std::string const & address, uint16_t port, std::shared_ptr<std::string> const & target, std::shared_ptr<std::string> const & body, std::shared_ptr<boost::asio::ip::tcp::resolver> const & resolver)
@@ -625,6 +627,13 @@ void nano::node::process_local_async (std::shared_ptr<nano::block> const & block
 
 void nano::node::start ()
 {
+	if (started.exchange (true))
+	{
+		debug_assert (false, "node started multiple times");
+		return;
+	}
+
+	io_ctx.start ();
 	long_inactivity_cleanup ();
 	network.start ();
 	add_initial_peers ();
@@ -708,7 +717,6 @@ void nano::node::start ()
 
 void nano::node::stop ()
 {
-	// Ensure stop can only be called once
 	if (stopped.exchange (true))
 	{
 		return;
@@ -748,6 +756,7 @@ void nano::node::stop ()
 	epoch_upgrader.stop ();
 	workers.stop ();
 	// work pool is not stopped on purpose due to testing setup
+	io_ctx.stop ();
 }
 
 void nano::node::keepalive_preconfigured (std::vector<std::string> const & peers_a)
@@ -1529,7 +1538,6 @@ nano::telemetry_data nano::node::local_telemetry () const
 
 nano::node_wrapper::node_wrapper (boost::filesystem::path const & path_a, boost::filesystem::path const & config_path_a, nano::node_flags const & node_flags_a) :
 	network_params{ nano::network_constants::active_network },
-	io_context (std::make_shared<boost::asio::io_context> ()),
 	work{ network_params.network, 1 }
 {
 	boost::system::error_code error_chmod;
@@ -1558,7 +1566,7 @@ nano::node_wrapper::node_wrapper (boost::filesystem::path const & path_a, boost:
 	node_config.logging.max_size = std::numeric_limits<std::uintmax_t>::max ();
 	node_config.logging.init (path_a);
 
-	node = std::make_shared<nano::node> (*io_context, path_a, node_config, work, node_flags_a);
+	node = std::make_shared<nano::node> (path_a, node_config, work, node_flags_a);
 }
 
 nano::node_wrapper::~node_wrapper ()
