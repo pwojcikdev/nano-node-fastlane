@@ -4,6 +4,7 @@
 #include <nano/lib/timer.hpp>
 #include <nano/node/bandwidth_limiter.hpp>
 #include <nano/node/bootstrap/bootstrap_attempt.hpp>
+#include <nano/node/bootstrap/bootstrap_config.hpp>
 #include <nano/node/bootstrap/bootstrap_server.hpp>
 
 #include <boost/multi_index/hashed_index.hpp>
@@ -33,6 +34,23 @@ namespace transport
 class bootstrap_ascending
 {
 	using id_t = uint64_t;
+
+	// Class used to throttle the ascending bootstrapper once it reaches a steady state
+	// Tracks verify_result samples and signals throttling if no tracked samples have gotten results
+	class throttle
+	{
+	public:
+		// Initialized with all true samples
+		explicit throttle (size_t size);
+		bool throttled () const;
+		void add (bool success);
+
+	private:
+		// Rolling count of true samples in the sample buffer
+		size_t successes;
+		// Circular buffer that tracks sample results. True when something was retrieved, false otherwise
+		boost::circular_buffer<bool> samples;
+	};
 
 public:
 	bootstrap_ascending (nano::node &, nano::store &, nano::block_processor &, nano::ledger &, nano::network &, nano::stats &);
@@ -86,6 +104,7 @@ private:
 	/* Inspects a block that has been processed by the block processor */
 	void inspect (nano::transaction const &, nano::process_return const & result, nano::block const & block);
 
+	void throttle_if_needed ();
 	void run ();
 	bool run_one ();
 	void run_timeouts ();
@@ -131,7 +150,7 @@ public: // account_sets
 	class account_sets
 	{
 	public:
-		explicit account_sets (nano::stats &);
+		explicit account_sets (nano::stats &, nano::account_sets_config config = {});
 
 		/**
 		 * If an account is not blocked, increase its priority.
@@ -229,11 +248,8 @@ public: // account_sets
 
 		std::default_random_engine rng;
 
-	private: // TODO: Move into config
-		static std::size_t constexpr consideration_count = 4;
-		static std::size_t constexpr priorities_max = 256 * 1024;
-		static std::size_t constexpr blocking_max = 256 * 1024;
-		static nano::millis_t constexpr cooldown = 3 * 1000;
+	private:
+		nano::account_sets_config config;
 
 	public: // Consts
 		static float constexpr priority_initial = 8.0f;
@@ -275,6 +291,8 @@ private: // Database iterators
 		explicit buffered_iterator (nano::store & store);
 		nano::account operator* () const;
 		nano::account next ();
+		// Indicates if a full ledger iteration has taken place e.g. warmed up
+		bool warmup () const;
 
 	private:
 		void fill ();
@@ -282,6 +300,7 @@ private: // Database iterators
 	private:
 		nano::store & store;
 		std::deque<nano::account> buffer;
+		bool warmup_m{ true };
 
 		database_iterator accounts_iterator;
 		database_iterator pending_iterator;
@@ -292,6 +311,7 @@ private: // Database iterators
 private:
 	account_sets accounts;
 	buffered_iterator iterator;
+	throttle throttle;
 
 	// clang-format off
 	class tag_sequenced {};
@@ -319,11 +339,5 @@ private:
 	mutable nano::condition_variable condition;
 	std::thread thread;
 	std::thread timeout_thread;
-
-private: // TODO: Move into config
-	static std::size_t constexpr requests_limit{ 128 };
-	static std::size_t constexpr database_requests_limit{ 1024 };
-	static std::size_t constexpr pull_count{ nano::bootstrap_server::max_blocks };
-	static nano::millis_t constexpr timeout{ 1000 * 3 };
 };
 }

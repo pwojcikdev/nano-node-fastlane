@@ -9,6 +9,30 @@
 
 using namespace std::chrono_literals;
 
+nano::bootstrap_ascending::throttle::throttle (size_t count) :
+	successes{ count },
+	samples{ count, true }
+{
+}
+
+bool nano::bootstrap_ascending::throttle::throttled () const
+{
+	return successes == 0;
+}
+
+void nano::bootstrap_ascending::throttle::add (bool sample)
+{
+	if (samples.front ())
+	{
+		--successes;
+	}
+	samples.push_back (sample);
+	if (sample)
+	{
+		++successes;
+	}
+}
+
 /*
  * database_iterator
  */
@@ -89,6 +113,11 @@ nano::account nano::bootstrap_ascending::buffered_iterator::next ()
 	return *(*this);
 }
 
+bool nano::bootstrap_ascending::buffered_iterator::warmup () const
+{
+	return warmup_m;
+}
+
 void nano::bootstrap_ascending::buffered_iterator::fill ()
 {
 	debug_assert (buffer.empty ());
@@ -112,6 +141,10 @@ void nano::bootstrap_ascending::buffered_iterator::fill ()
 		{
 			buffer.push_back (*pending_iterator);
 		}
+		else
+		{
+			warmup_m = false;
+		}
 	}
 }
 
@@ -119,8 +152,9 @@ void nano::bootstrap_ascending::buffered_iterator::fill ()
  * account_sets
  */
 
-nano::bootstrap_ascending::account_sets::account_sets (nano::stats & stats_a) :
-	stats{ stats_a }
+nano::bootstrap_ascending::account_sets::account_sets (nano::stats & stats_a, nano::account_sets_config config_a) :
+	stats{ stats_a },
+	config{ std::move (config_a) }
 {
 }
 
@@ -239,7 +273,7 @@ bool nano::bootstrap_ascending::account_sets::check_timestamp (const nano::accou
 	auto iter = priorities.get<tag_account> ().find (account);
 	if (iter != priorities.get<tag_account> ().end ())
 	{
-		if (nano::milliseconds_since_epoch () - iter->timestamp < cooldown)
+		if (nano::milliseconds_since_epoch () - iter->timestamp < config.cooldown)
 		{
 			return false;
 		}
@@ -249,14 +283,14 @@ bool nano::bootstrap_ascending::account_sets::check_timestamp (const nano::accou
 
 void nano::bootstrap_ascending::account_sets::trim_overflow ()
 {
-	if (priorities.size () > priorities_max)
+	if (priorities.size () > config.priorities_max)
 	{
 		// Evict the lowest priority entry
 		priorities.get<tag_priority> ().erase (priorities.get<tag_priority> ().begin ());
 
 		stats.inc (nano::stat::type::bootstrap_ascending_accounts, nano::stat::detail::priority_erase_overflow);
 	}
-	if (blocking.size () > blocking_max)
+	if (blocking.size () > config.blocking_max)
 	{
 		// Evict the lowest priority entry
 		blocking.get<tag_priority> ().erase (blocking.get<tag_priority> ().begin ());
@@ -276,7 +310,7 @@ nano::account nano::bootstrap_ascending::account_sets::next ()
 	std::vector<nano::account> candidates;
 
 	int iterations = 0;
-	while (candidates.size () < account_sets::consideration_count && iterations++ < account_sets::consideration_count * 10)
+	while (candidates.size () < config.consideration_count && iterations++ < config.consideration_count * 10)
 	{
 		debug_assert (candidates.size () == weights.size ());
 
@@ -373,8 +407,9 @@ nano::bootstrap_ascending::bootstrap_ascending (nano::node & node_a, nano::store
 	stats{ stat_a },
 	accounts{ stats },
 	iterator{ store },
-	limiter{ requests_limit, 1.0 },
-	database_limiter{ database_requests_limit, 1.0 }
+	throttle{ node.config.bootstrap_ascending.throttle_count },
+	limiter{ node.config.bootstrap_ascending.requests_limit, 1.0 },
+	database_limiter{ node.config.bootstrap_ascending.database_requests_limit, 1.0 }
 {
 	// TODO: This is called from a very congested blockprocessor thread. Offload this work to a dedicated processing thread
 	block_processor.batch_processed.add ([this] (auto const & batch) {
@@ -444,8 +479,8 @@ void nano::bootstrap_ascending::send (std::shared_ptr<nano::transport::channel> 
 
 	nano::asc_pull_req::blocks_payload request_payload;
 	request_payload.start = tag.start;
-	request_payload.count = pull_count;
-	request_payload.start_type = tag.type == async_tag::query_type::blocks_by_hash ? nano::asc_pull_req::hash_type::block : nano::asc_pull_req::hash_type::account;
+	request_payload.count = node.config.bootstrap_ascending.pull_count;
+	request_payload.start_type = (tag.type == async_tag::query_type::blocks_by_hash) ? nano::asc_pull_req::hash_type::block : nano::asc_pull_req::hash_type::account;
 
 	request.payload = request_payload;
 	request.update_header ();
@@ -455,7 +490,7 @@ void nano::bootstrap_ascending::send (std::shared_ptr<nano::transport::channel> 
 	// TODO: There is no feedback mechanism if bandwidth limiter starts dropping our requests
 	channel->send (
 	request, nullptr,
-	nano::transport::buffer_drop_policy::limiter, nano::bandwidth_limit_type::bootstrap);
+	nano::transport::buffer_drop_policy::limiter, nano::transport::traffic_type::bootstrap);
 }
 
 size_t nano::bootstrap_ascending::priority_size () const
@@ -550,9 +585,10 @@ void nano::bootstrap_ascending::wait_blockprocessor ()
 
 void nano::bootstrap_ascending::wait_available_request ()
 {
+	nano::unique_lock<nano::mutex> lock{ mutex };
 	while (!stopped && !limiter.should_pass (1))
 	{
-		std::this_thread::sleep_for (50ms); // Give it at least some time to cooldown to avoid hitting the limit too frequently
+		condition.wait_for (lock, 50ms, [this] () { return stopped; }); // Give it at least some time to cooldown to avoid hitting the limit too frequently
 	}
 }
 
@@ -561,7 +597,7 @@ std::shared_ptr<nano::transport::channel> nano::bootstrap_ascending::available_c
 	auto channels = network.random_set (32, node.network_params.network.bootstrap_protocol_version_min, /* include temporary channels */ true);
 	for (auto & channel : channels)
 	{
-		if (!channel->max ())
+		if (!channel->max (nano::transport::traffic_type::bootstrap))
 		{
 			return channel;
 		}
@@ -572,9 +608,10 @@ std::shared_ptr<nano::transport::channel> nano::bootstrap_ascending::available_c
 std::shared_ptr<nano::transport::channel> nano::bootstrap_ascending::wait_available_channel ()
 {
 	std::shared_ptr<nano::transport::channel> channel;
+	nano::unique_lock<nano::mutex> lock{ mutex };
 	while (!stopped && !(channel = available_channel ()))
 	{
-		std::this_thread::sleep_for (100ms);
+		condition.wait_for (lock, 100ms, [this] () { return stopped; });
 	}
 	return channel;
 }
@@ -677,12 +714,23 @@ bool nano::bootstrap_ascending::run_one ()
 	return success;
 }
 
+void nano::bootstrap_ascending::throttle_if_needed ()
+{
+	nano::unique_lock<nano::mutex> lock{ mutex };
+	if (!iterator.warmup () && throttle.throttled ())
+	{
+		stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::throttled);
+		condition.wait_for (lock, std::chrono::milliseconds{ node.config.bootstrap_ascending.throttle_wait }, [this] () { return stopped; });
+	}
+}
+
 void nano::bootstrap_ascending::run ()
 {
 	while (!stopped)
 	{
 		stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::loop);
 		run_one ();
+		throttle_if_needed ();
 	}
 }
 
@@ -692,7 +740,7 @@ void nano::bootstrap_ascending::run_timeouts ()
 	while (!stopped)
 	{
 		auto & tags_by_order = tags.get<tag_sequenced> ();
-		while (!tags_by_order.empty () && nano::time_difference (tags_by_order.front ().time, nano::milliseconds_since_epoch ()) > timeout)
+		while (!tags_by_order.empty () && nano::time_difference (tags_by_order.front ().time, nano::milliseconds_since_epoch ()) > node.config.bootstrap_ascending.timeout)
 		{
 			auto tag = tags_by_order.front ();
 			tags_by_order.pop_front ();
@@ -742,16 +790,17 @@ void nano::bootstrap_ascending::process (const nano::asc_pull_ack::blocks_payloa
 			{
 				block_processor.add (block);
 			}
+			nano::lock_guard<nano::mutex> lock{ mutex };
+			throttle.add (true);
 		}
 		break;
 		case verify_result::nothing_new:
 		{
 			stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::nothing_new);
 
-			{
-				nano::lock_guard<nano::mutex> lock{ mutex };
-				accounts.priority_down (tag.account);
-			}
+			nano::lock_guard<nano::mutex> lock{ mutex };
+			accounts.priority_down (tag.account);
+			throttle.add (false);
 		}
 		break;
 		case verify_result::invalid:
