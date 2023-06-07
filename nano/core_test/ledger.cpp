@@ -2,6 +2,8 @@
 #include <nano/lib/threading.hpp>
 #include <nano/node/election.hpp>
 #include <nano/node/rocksdb/rocksdb.hpp>
+#include <nano/node/scheduler/buckets.hpp>
+#include <nano/node/scheduler/component.hpp>
 #include <nano/node/transport/inproc.hpp>
 #include <nano/test_common/ledger.hpp>
 #include <nano/test_common/system.hpp>
@@ -911,7 +913,7 @@ TEST (votes, check_signature)
 		auto transaction (node1.store.tx_begin_write ());
 		ASSERT_EQ (nano::process_result::progress, node1.ledger.process (transaction, *send1).code);
 	}
-	node1.scheduler.activate (nano::dev::genesis_key.pub, node1.store.tx_begin_read ());
+	node1.scheduler.buckets.activate (nano::dev::genesis_key.pub, node1.store.tx_begin_read ());
 	ASSERT_TIMELY (5s, node1.active.election (send1->qualified_root ()));
 	auto election1 = node1.active.election (send1->qualified_root ());
 	ASSERT_EQ (1, election1->votes ().size ());
@@ -982,7 +984,7 @@ TEST (votes, add_existing)
 										 .build ();
 	node1.work_generate_blocking (*send1);
 	ASSERT_EQ (nano::process_result::progress, node1.ledger.process (node1.store.tx_begin_write (), *send1).code);
-	node1.scheduler.activate (nano::dev::genesis_key.pub, node1.store.tx_begin_read ());
+	node1.scheduler.buckets.activate (nano::dev::genesis_key.pub, node1.store.tx_begin_read ());
 	ASSERT_TIMELY (5s, node1.active.election (send1->qualified_root ()));
 	auto election1 = node1.active.election (send1->qualified_root ());
 	auto vote1 (std::make_shared<nano::vote> (nano::dev::genesis_key.pub, nano::dev::genesis_key.prv, nano::vote::timestamp_min * 1, 0, std::vector<nano::block_hash>{ send1->hash () }));
@@ -5541,7 +5543,6 @@ TEST (ledger, migrate_lmdb_to_rocksdb)
 	boost::asio::ip::address_v6 address (boost::asio::ip::make_address_v6 ("::ffff:127.0.0.1"));
 	uint16_t port = 100;
 	nano::lmdb::store store{ logger, path / "data.ldb", nano::dev::constants };
-	nano::unchecked_map unchecked{ system.stats, false };
 	nano::ledger ledger{ store, system.stats, nano::dev::constants };
 	nano::work_pool pool{ nano::dev::network_params.network, std::numeric_limits<unsigned>::max () };
 
@@ -5556,7 +5557,7 @@ TEST (ledger, migrate_lmdb_to_rocksdb)
 										.build_shared ();
 
 	nano::endpoint_key endpoint_key (address.to_bytes (), port);
-	auto version = 99;
+	auto version = nano::store::version_current;
 
 	{
 		auto transaction = store.tx_begin_write ();
@@ -5582,7 +5583,6 @@ TEST (ledger, migrate_lmdb_to_rocksdb)
 	ASSERT_FALSE (error);
 
 	nano::rocksdb::store rocksdb_store{ logger, path / "rocksdb", nano::dev::constants };
-	nano::unchecked_map rocksdb_unchecked{ system.stats, false };
 	auto rocksdb_transaction (rocksdb_store.tx_begin_read ());
 
 	nano::pending_info pending_info{};
