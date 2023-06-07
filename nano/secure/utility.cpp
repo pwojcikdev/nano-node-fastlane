@@ -8,7 +8,13 @@ static std::vector<boost::filesystem::path> all_unique_paths;
 
 boost::filesystem::path nano::working_path (nano::networks network)
 {
-	auto result (nano::app_path ());
+	auto result = nano::app_path ();
+
+	if (auto path_override = nano::get_env ("NANO_APP_PATH"))
+	{
+		result = *path_override;
+	}
+
 	switch (network)
 	{
 		case nano::networks::invalid:
