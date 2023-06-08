@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 
+#include <nano/lib/logging.hpp>
 #include <nano/node/common.hpp>
 #include <nano/node/logging.hpp>
 #include <nano/secure/utility.hpp>
@@ -18,6 +19,7 @@ void force_nano_dev_network ();
 GTEST_API_ int main (int argc, char ** argv)
 {
 	printf ("Running main() from core_test_main.cc\n");
+	nano::initialize_logging ();
 	nano::force_nano_dev_network ();
 	nano::node_singleton_memory_pool_purge_guard memory_pool_cleanup_guard;
 	// Setting up logging so that there aren't any piped to standard output.

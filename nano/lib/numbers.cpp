@@ -162,6 +162,13 @@ bool nano::uint256_union::is_zero () const
 	return qwords[0] == 0 && qwords[1] == 0 && qwords[2] == 0 && qwords[3] == 0;
 }
 
+std::ostream & nano::operator<< (std::ostream & os, const uint256_union & val)
+{
+	// TODO: Replace with streaming implementation
+	os << val.to_string ();
+	return os;
+}
+
 std::string nano::uint256_union::to_string () const
 {
 	std::string result;

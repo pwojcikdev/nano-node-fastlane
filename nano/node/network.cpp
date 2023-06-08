@@ -1,5 +1,6 @@
 #include <nano/crypto_lib/random_pool_shuffle.hpp>
 #include <nano/lib/threading.hpp>
+#include <nano/lib/utility.hpp>
 #include <nano/node/bootstrap_ascending/service.hpp>
 #include <nano/node/network.hpp>
 #include <nano/node/node.hpp>
@@ -30,36 +31,35 @@ nano::network::network (nano::node & node_a, uint16_t port_a) :
 	// TCP
 	for (std::size_t i = 0; i < node.config.network_threads && !node.flags.disable_tcp_realtime; ++i)
 	{
-		packet_processing_threads.emplace_back (nano::thread_attributes::get_default (), [this] () {
+		packet_processing_threads.emplace_back (nano::thread_attributes::get_default (), [this, i] () {
 			nano::thread_role::set (nano::thread_role::name::packet_processing);
+			nlogger.debug ("Started TCP packet processing thread [{:2}]", i);
+
 			try
 			{
 				tcp_channels.process_messages ();
 			}
 			catch (boost::system::error_code & ec)
 			{
-				this->node.logger.always_log (FATAL_LOG_PREFIX, ec.message ());
+				nlogger.critical ("Error: {}", ec.message ());
 				release_assert (false);
 			}
 			catch (std::error_code & ec)
 			{
-				this->node.logger.always_log (FATAL_LOG_PREFIX, ec.message ());
+				nlogger.critical ("Error: {}", ec.message ());
 				release_assert (false);
 			}
 			catch (std::runtime_error & err)
 			{
-				this->node.logger.always_log (FATAL_LOG_PREFIX, err.what ());
+				nlogger.critical ("Error: {}", err.what ());
 				release_assert (false);
 			}
 			catch (...)
 			{
-				this->node.logger.always_log (FATAL_LOG_PREFIX, "Unknown exception");
+				nlogger.critical ("Unknown error");
 				release_assert (false);
 			}
-			if (this->node.config.logging.network_packet_logging ())
-			{
-				this->node.logger.try_log ("Exiting TCP packet processing thread");
-			}
+			nlogger.debug ("Exiting TCP packet processing thread [{:2}]", i);
 		});
 	}
 }
@@ -131,10 +131,12 @@ void nano::network::send_node_id_handshake (std::shared_ptr<nano::transport::cha
 
 	nano::node_id_handshake message{ node.network_params.network, query, response };
 
-	if (node.config.logging.network_node_id_handshake_logging ())
-	{
-		node.logger.try_log (boost::str (boost::format ("Node ID handshake sent with node ID %1% to %2%: query %3%, respond_to %4% (signature %5%)") % node.node_id.pub.to_node_id () % channel_a->get_endpoint () % (query ? query->cookie.to_string () : std::string ("[none]")) % (respond_to ? respond_to->to_string () : std::string ("[none]")) % (response ? response->signature.to_string () : std::string ("[none]"))));
-	}
+	nlogger.debug ("Node ID handshake sent with node id: {} to {} [query: {}, respond to: {}, signature: {}]",
+	node.node_id.pub.to_node_id (),
+	nano::util::to_str (channel_a->get_endpoint ()),
+	(query ? query->cookie.to_string () : std::string{ "<none>" }),
+	(respond_to ? respond_to->to_string () : std::string{ "<none>" }),
+	(response ? response->signature.to_string () : std::string{ "<none>" }));
 
 	channel_a->send (message);
 }
@@ -361,21 +363,23 @@ void nano::network::broadcast_confirm_req_many (std::deque<std::pair<std::shared
 
 namespace
 {
+using namespace nano;
+
 class network_message_visitor : public nano::message_visitor
 {
 public:
-	network_message_visitor (nano::node & node_a, std::shared_ptr<nano::transport::channel> const & channel_a) :
-		node (node_a),
-		channel (channel_a)
+	network_message_visitor (nano::node & node_a, std::shared_ptr<nano::transport::channel> const & channel_a, nano::nlogger & logger_a) :
+		node{ node_a },
+		channel{ channel_a },
+		nlogger{ logger_a }
 	{
 	}
 
+	static constexpr std::string_view MESSAGE_LOG_STRING{ "[{:30}] Received '{:13}' for: [{}]" };
+
 	void keepalive (nano::keepalive const & message_a) override
 	{
-		if (node.config.logging.network_keepalive_logging ())
-		{
-			node.logger.try_log (boost::str (boost::format ("Received keepalive message from %1%") % channel->to_string ()));
-		}
+		nlogger.debug (MESSAGE_LOG_STRING, channel->to_string (), "keepalive", "");
 
 		node.network.merge_peers (message_a.peers);
 
@@ -393,10 +397,7 @@ public:
 
 	void publish (nano::publish const & message_a) override
 	{
-		if (node.config.logging.network_message_logging ())
-		{
-			node.logger.try_log (boost::str (boost::format ("Publish message from %1% for %2%") % channel->to_string () % message_a.block->hash ().to_string ()));
-		}
+		nlogger.debug (MESSAGE_LOG_STRING, channel->to_string (), "publish", message_a.block->hash ().to_string ());
 
 		if (!node.block_processor.full ())
 		{
@@ -411,17 +412,10 @@ public:
 
 	void confirm_req (nano::confirm_req const & message_a) override
 	{
-		if (node.config.logging.network_message_logging ())
-		{
-			if (!message_a.roots_hashes.empty ())
-			{
-				node.logger.try_log (boost::str (boost::format ("Confirm_req message from %1% for hashes:roots %2%") % channel->to_string () % message_a.roots_string ()));
-			}
-			else
-			{
-				node.logger.try_log (boost::str (boost::format ("Confirm_req message from %1% for %2%") % channel->to_string () % message_a.block->hash ().to_string ()));
-			}
-		}
+		nlogger.debug (MESSAGE_LOG_STRING,
+		channel->to_string (),
+		"confirm_req",
+		(!message_a.roots_hashes.empty () ? message_a.roots_string () : message_a.block->hash ().to_string ()));
 
 		// Don't load nodes with disabled voting
 		if (node.config.enable_voting && node.wallets.reps ().voting > 0)
@@ -439,10 +433,10 @@ public:
 
 	void confirm_ack (nano::confirm_ack const & message_a) override
 	{
-		if (node.config.logging.network_message_logging ())
-		{
-			node.logger.try_log (boost::str (boost::format ("Received confirm_ack message from %1% for %2% timestamp %3%") % channel->to_string () % message_a.vote->hashes_string () % std::to_string (message_a.vote->timestamp ())));
-		}
+		nlogger.debug (MESSAGE_LOG_STRING,
+		channel->to_string (),
+		"confirm_ack",
+		fmt::format ("hashes: {}, timestamp: {}", message_a.vote->hashes_string (), message_a.vote->timestamp ()));
 
 		if (!message_a.vote->account.is_zero ())
 		{
@@ -477,10 +471,7 @@ public:
 
 	void telemetry_req (nano::telemetry_req const & message_a) override
 	{
-		if (node.config.logging.network_telemetry_logging ())
-		{
-			node.logger.try_log (boost::str (boost::format ("Telemetry_req message from %1%") % channel->to_string ()));
-		}
+		nlogger.debug (MESSAGE_LOG_STRING, channel->to_string (), "telemetry_req", "");
 
 		// Send an empty telemetry_ack if we do not want, just to acknowledge that we have received the message to
 		// remove any timeouts on the server side waiting for a message.
@@ -495,27 +486,29 @@ public:
 
 	void telemetry_ack (nano::telemetry_ack const & message_a) override
 	{
-		if (node.config.logging.network_telemetry_logging ())
-		{
-			node.logger.try_log (boost::str (boost::format ("Received telemetry_ack message from %1%") % channel->to_string ()));
-		}
+		nlogger.debug (MESSAGE_LOG_STRING, channel->to_string (), "telemetry_ack", "");
 
 		node.telemetry.process (message_a, channel);
 	}
 
 	void asc_pull_req (nano::asc_pull_req const & message) override
 	{
+		nlogger.debug (MESSAGE_LOG_STRING, channel->to_string (), "asc_pull_req", message.id);
+
 		node.bootstrap_server.request (message, channel);
 	}
 
 	void asc_pull_ack (nano::asc_pull_ack const & message) override
 	{
+		nlogger.debug (MESSAGE_LOG_STRING, channel->to_string (), "asc_pull_ack", message.id);
+
 		node.ascendboot.process (message, channel);
 	}
 
 private:
 	nano::node & node;
 	std::shared_ptr<nano::transport::channel> channel;
+	nano::nlogger & nlogger;
 };
 }
 
@@ -523,7 +516,7 @@ void nano::network::process_message (nano::message const & message, std::shared_
 {
 	node.stats.inc (nano::stat::type::message, nano::to_stat_detail (message.header.type), nano::stat::dir::in);
 
-	network_message_visitor visitor (node, channel);
+	network_message_visitor visitor{ node, channel, nlogger_messages };
 	message.visit (visitor);
 }
 
