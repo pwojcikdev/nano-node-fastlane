@@ -109,6 +109,8 @@ target_link_libraries(
   blake2
   ${CRYPTOPP_LIBRARY}
   ${CMAKE_DL_LIBS}
+  fmt::fmt
+  spdlog::spdlog
   Boost::iostreams
   Boost::asio
   Boost::circular_buffer
