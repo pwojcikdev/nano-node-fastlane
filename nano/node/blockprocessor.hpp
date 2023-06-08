@@ -1,6 +1,7 @@
 #pragma once
 
 #include <nano/lib/blocks.hpp>
+#include <nano/lib/logging.hpp>
 #include <nano/node/blocking_observer.hpp>
 #include <nano/node/state_block_signature_verification.hpp>
 #include <nano/secure/common.hpp>
@@ -24,6 +25,8 @@ class write_database_queue;
  */
 class block_processor final
 {
+	nano::nlogger nlogger{ "blockprocessor" };
+
 public:
 	explicit block_processor (nano::node &, nano::write_database_queue &);
 	void stop ();
