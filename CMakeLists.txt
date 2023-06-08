@@ -14,7 +14,7 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET
     12
     CACHE STRING "")
 
-project(nano-node)
+project(nano-node-fastlane)
 
 # Get the latest abbreviated commit hash of the working branch
 execute_process(
