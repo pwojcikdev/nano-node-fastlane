@@ -106,6 +106,8 @@ target_link_libraries(
   ipc_flatbuffers_lib
   ${CRYPTOPP_LIBRARY}
   ${CMAKE_DL_LIBS}
+  fmt::fmt
+  spdlog::spdlog
   Boost::asio
   Boost::circular_buffer
   Boost::dll
