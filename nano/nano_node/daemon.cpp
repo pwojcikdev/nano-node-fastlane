@@ -18,6 +18,8 @@
 #include <csignal>
 #include <iostream>
 
+#include <fmt/chrono.h>
+
 namespace
 {
 void nano_abort_signal_handler (int signum)
@@ -57,8 +59,11 @@ volatile sig_atomic_t sig_int_or_term = 0;
 constexpr std::size_t OPEN_FILE_DESCRIPTORS_LIMIT = 16384;
 }
 
-void nano_daemon::daemon::run (boost::filesystem::path const & data_path, nano::node_flags const & flags)
+void nano::daemon::run (boost::filesystem::path const & data_path, nano::node_flags const & flags)
 {
+	nano::initialize_logging ();
+	nlogger.info (nano::log::tag::daemon, "Daemon started");
+
 	install_abort_signal_handler ();
 
 	boost::filesystem::create_directories (data_path);
@@ -98,23 +103,18 @@ void nano_daemon::daemon::run (boost::filesystem::path const & data_path, nano::
 																																		  : std::function<boost::optional<uint64_t> (nano::work_version const, nano::root const &, uint64_t, std::atomic<int> &)> (nullptr));
 		try
 		{
-			// This avoid a blank prompt during any node initialization delays
-			auto initialization_text = "Starting up Nano node...";
-			std::cout << initialization_text << std::endl;
-			logger.always_log (initialization_text);
+			// This avoids a blank prompt during any node initialization delays
+			nlogger.info (nano::log::tag::daemon, "Starting up Nano node...");
 
 			// Print info about number of logical cores detected, those are used to decide how many IO, worker and signature checker threads to spawn
-			logger.always_log (boost::format ("Hardware concurrency: %1% ( configured: %2% )") % std::thread::hardware_concurrency () % nano::hardware_concurrency ());
+			nlogger.info (nano::log::tag::daemon, "Hardware concurrency: {} ( configured: {} )", std::thread::hardware_concurrency (), nano::hardware_concurrency ());
 
 			nano::set_file_descriptor_limit (OPEN_FILE_DESCRIPTORS_LIMIT);
 			auto const file_descriptor_limit = nano::get_file_descriptor_limit ();
+			nlogger.info (nano::log::tag::daemon, "Open file descriptors limit: {}", file_descriptor_limit);
 			if (file_descriptor_limit < OPEN_FILE_DESCRIPTORS_LIMIT)
 			{
-				logger.always_log (boost::format ("WARNING: open file descriptors limit is %1%, lower than the %2% recommended. Node was unable to change it.") % file_descriptor_limit % OPEN_FILE_DESCRIPTORS_LIMIT);
-			}
-			else
-			{
-				logger.always_log (boost::format ("Open file descriptors limit is %1%") % file_descriptor_limit);
+				nlogger.warn (nano::log::tag::daemon, "Open file descriptors limit is lower than the {} recommended. Node was unable to change it.", OPEN_FILE_DESCRIPTORS_LIMIT);
 			}
 
 			// for the daemon start up, if the user hasn't specified a port in
@@ -131,18 +131,15 @@ void nano_daemon::daemon::run (boost::filesystem::path const & data_path, nano::
 				auto network_label = node->network_params.network.get_current_network_as_string ();
 				std::time_t dateTime = std::time (nullptr);
 
-				std::cout << "Network: " << network_label << ", version: " << NANO_VERSION_STRING << "\n"
-						  << "Path: " << node->application_path.string () << "\n"
-						  << "Build Info: " << BUILD_INFO << "\n"
-						  << "Database backend: " << node->store.vendor_get () << "\n"
-						  << "Start time: " << std::put_time (std::gmtime (&dateTime), "%c UTC") << std::endl;
+				nlogger.info (nano::log::tag::daemon, "Network: {}", network_label);
+				nlogger.info (nano::log::tag::daemon, "Version: {}", NANO_VERSION_STRING);
+				nlogger.info (nano::log::tag::daemon, "Path: '{}'", node->application_path.string ());
+				nlogger.info (nano::log::tag::daemon, "Build info: {}", BUILD_INFO);
+				nlogger.info (nano::log::tag::daemon, "Database backend: {}", node->store.vendor_get ());
+				nlogger.info (nano::log::tag::daemon, "Start time: {:%c} UTC", fmt::gmtime (dateTime));
 
-				auto voting (node->wallets.reps ().voting);
-				if (voting > 1)
-				{
-					std::cout << "Voting with more than one representative can limit performance: " << voting << " representatives are configured" << std::endl;
-				}
 				node->start ();
+
 				nano::ipc::ipc_server ipc_server (*node, config.rpc);
 				std::unique_ptr<boost::process::child> rpc_process;
 				std::unique_ptr<nano::rpc> rpc;
@@ -216,16 +213,18 @@ void nano_daemon::daemon::run (boost::filesystem::path const & data_path, nano::
 			}
 			else
 			{
-				std::cerr << "Error initializing node\n";
+				nlogger.critical (nano::log::tag::daemon, "Error initializing node");
 			}
 		}
 		catch (std::runtime_error const & e)
 		{
-			std::cerr << "Error while running node (" << e.what () << ")\n";
+			nlogger.critical (nano::log::tag::daemon, "Error while running node [{}]", e.what ());
 		}
 	}
 	else
 	{
-		std::cerr << "Error deserializing config: " << error.get_message () << std::endl;
+		nlogger.critical (nano::log::tag::daemon, "Error deserializing config: {}", error.get_message ());
 	}
+
+	nlogger.info (nano::log::tag::daemon, "Daemon exiting");
 }

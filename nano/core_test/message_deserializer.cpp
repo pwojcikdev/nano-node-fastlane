@@ -210,11 +210,11 @@ TEST (message_deserializer, exact_asc_pull_ack)
 
 	nano::asc_pull_ack::account_info_payload message_payload;
 	message_payload.account = nano::test::random_account ();
-	message_payload.account_open = nano::test::random_hash ();
-	message_payload.account_head = nano::test::random_hash ();
-	message_payload.account_block_count = 932932132;
-	message_payload.account_conf_frontier = nano::test::random_hash ();
-	message_payload.account_conf_height = 847312;
+	message_payload.open = nano::test::random_hash ();
+	message_payload.head = nano::test::random_hash ();
+	message_payload.block_count = 932932132;
+	message_payload.conf_frontier = nano::test::random_hash ();
+	message_payload.conf_height = 847312;
 
 	message.payload = message_payload;
 	message.update_header ();

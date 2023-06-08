@@ -4,6 +4,7 @@
 #include <nano/lib/epoch.hpp>
 #include <nano/lib/errors.hpp>
 #include <nano/lib/numbers.hpp>
+#include <nano/lib/object_stream.hpp>
 #include <nano/lib/optional_ptr.hpp>
 #include <nano/lib/stream.hpp>
 #include <nano/lib/timer.hpp>
@@ -18,6 +19,7 @@ namespace nano
 {
 class block_visitor;
 class mutable_block_visitor;
+
 enum class block_type : uint8_t
 {
 	invalid = 0,
@@ -28,6 +30,9 @@ enum class block_type : uint8_t
 	change = 5,
 	state = 6
 };
+
+std::string_view to_string (block_type);
+
 class block_details
 {
 	static_assert (std::is_same<std::underlying_type<nano::epoch>::type, uint8_t> (), "Epoch enum is not the proper type");
@@ -51,6 +56,9 @@ public:
 private:
 	uint8_t packed () const;
 	void unpack (uint8_t);
+
+public: // Logging
+	void operator() (nano::object_stream &) const;
 };
 
 std::string state_subtype (nano::block_details const);
@@ -71,7 +79,11 @@ public:
 	uint64_t timestamp{ 0 };
 	nano::block_details details;
 	nano::epoch source_epoch{ nano::epoch::epoch_0 };
+
+public: // Logging
+	void operator() (nano::object_stream &) const;
 };
+
 class block
 {
 public:
@@ -128,6 +140,9 @@ protected:
 
 private:
 	nano::block_hash generate_hash () const;
+
+public: // Logging
+	virtual void operator() (nano::object_stream &) const;
 };
 
 using block_list_t = std::vector<std::shared_ptr<nano::block>>;
@@ -145,6 +160,7 @@ public:
 	nano::amount balance;
 	static std::size_t constexpr size = sizeof (previous) + sizeof (destination) + sizeof (balance);
 };
+
 class send_block : public nano::block
 {
 public:
@@ -178,7 +194,11 @@ public:
 	nano::signature signature;
 	uint64_t work;
 	static std::size_t constexpr size = nano::send_hashables::size + sizeof (signature) + sizeof (work);
+
+public: // Logging
+	void operator() (nano::object_stream &) const override;
 };
+
 class receive_hashables
 {
 public:
@@ -191,6 +211,7 @@ public:
 	nano::block_hash source;
 	static std::size_t constexpr size = sizeof (previous) + sizeof (source);
 };
+
 class receive_block : public nano::block
 {
 public:
@@ -223,7 +244,11 @@ public:
 	nano::signature signature;
 	uint64_t work;
 	static std::size_t constexpr size = nano::receive_hashables::size + sizeof (signature) + sizeof (work);
+
+public: // Logging
+	void operator() (nano::object_stream &) const override;
 };
+
 class open_hashables
 {
 public:
@@ -237,6 +262,7 @@ public:
 	nano::account account;
 	static std::size_t constexpr size = sizeof (source) + sizeof (representative) + sizeof (account);
 };
+
 class open_block : public nano::block
 {
 public:
@@ -272,7 +298,11 @@ public:
 	nano::signature signature;
 	uint64_t work;
 	static std::size_t constexpr size = nano::open_hashables::size + sizeof (signature) + sizeof (work);
+
+public: // Logging
+	void operator() (nano::object_stream &) const override;
 };
+
 class change_hashables
 {
 public:
@@ -285,6 +315,7 @@ public:
 	nano::account representative;
 	static std::size_t constexpr size = sizeof (previous) + sizeof (representative);
 };
+
 class change_block : public nano::block
 {
 public:
@@ -317,7 +348,11 @@ public:
 	nano::signature signature;
 	uint64_t work;
 	static std::size_t constexpr size = nano::change_hashables::size + sizeof (signature) + sizeof (work);
+
+public: // Logging
+	void operator() (nano::object_stream &) const override;
 };
+
 class state_hashables
 {
 public:
@@ -343,6 +378,7 @@ public:
 	// Serialized size
 	static std::size_t constexpr size = sizeof (account) + sizeof (previous) + sizeof (representative) + sizeof (balance) + sizeof (link);
 };
+
 class state_block : public nano::block
 {
 public:
@@ -378,7 +414,11 @@ public:
 	nano::signature signature;
 	uint64_t work;
 	static std::size_t constexpr size = nano::state_hashables::size + sizeof (signature) + sizeof (work);
+
+public: // Logging
+	void operator() (nano::object_stream &) const override;
 };
+
 class block_visitor
 {
 public:
@@ -399,6 +439,7 @@ public:
 	virtual void state_block (nano::state_block &) = 0;
 	virtual ~mutable_block_visitor () = default;
 };
+
 /**
  * This class serves to find and return unique variants of a block in order to minimize memory usage
  */
