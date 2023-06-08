@@ -515,6 +515,10 @@ add_subdirectory(crypto/ed25519-donna)
 add_subdirectory(nano/ipc_flatbuffers_lib)
 add_subdirectory(nano/ipc_flatbuffers_test)
 
+# spdlog
+find_package(spdlog REQUIRED)
+
+# miniupnp
 set(UPNPC_BUILD_SHARED
     OFF
     CACHE BOOL "")
@@ -657,10 +661,10 @@ add_subdirectory(nano/rpc)
 add_subdirectory(nano/nano_rpc)
 
 add_custom_target(
-    executables
-    COMMAND echo "BATCH BUILDING node + rpc"
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    DEPENDS nano_node nano_rpc)
+  executables
+  COMMAND echo "BATCH BUILDING node + rpc"
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  DEPENDS nano_node nano_rpc)
 
 if(NANO_FUZZER_TEST)
   if(NOT WIN32)

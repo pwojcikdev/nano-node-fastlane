@@ -1,5 +1,6 @@
 #pragma once
 
+#include <nano/lib/logging.hpp>
 #include <nano/node/common.hpp>
 #include <nano/node/peer_exclusion.hpp>
 #include <nano/node/transport/tcp.hpp>
@@ -72,6 +73,9 @@ private:
 
 class network final
 {
+	nano::nlogger nlogger{ "network" };
+	nano::nlogger nlogger_messages{ "network::messages" };
+
 public:
 	network (nano::node &, uint16_t);
 	~network ();

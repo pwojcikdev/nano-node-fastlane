@@ -6,6 +6,7 @@
 #include <nano/lib/config.hpp>
 #include <nano/lib/epoch.hpp>
 #include <nano/lib/numbers.hpp>
+#include <nano/lib/object_stream.hpp>
 #include <nano/lib/rep_weights.hpp>
 #include <nano/lib/stats.hpp>
 #include <nano/lib/timer.hpp>
@@ -244,12 +245,14 @@ namespace confirmation_height
 }
 
 using vote_blocks_vec_iter = std::vector<nano::block_hash>::const_iterator;
+
 class iterate_vote_blocks_as_hash final
 {
 public:
 	iterate_vote_blocks_as_hash () = default;
 	nano::block_hash operator() (nano::block_hash const & item) const;
 };
+
 class vote final
 {
 public:
@@ -296,7 +299,11 @@ public:
 
 private:
 	uint64_t packed_timestamp (uint64_t timestamp, uint8_t duration) const;
+
+public: // Logging
+	void operator() (nano::object_stream &) const;
 };
+
 /**
  * This class serves to find and return unique variants of a vote in order to minimize memory usage
  */
