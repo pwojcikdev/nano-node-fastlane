@@ -28,7 +28,6 @@ nano::network::network (nano::node & node_a, uint16_t port_a) :
 	port (port_a),
 	disconnect_observer ([] () {})
 {
-	// TCP
 	for (std::size_t i = 0; i < node.config.network_threads && !node.flags.disable_tcp_realtime; ++i)
 	{
 		packet_processing_threads.emplace_back (nano::thread_attributes::get_default (), [this, i] () {
@@ -59,6 +58,7 @@ nano::network::network (nano::node & node_a, uint16_t port_a) :
 				nlogger.critical ("Unknown error");
 				release_assert (false);
 			}
+
 			nlogger.debug ("Exiting TCP packet processing thread [{:2}]", i);
 		});
 	}
@@ -363,8 +363,6 @@ void nano::network::broadcast_confirm_req_many (std::deque<std::pair<std::shared
 
 namespace
 {
-using namespace nano;
-
 class network_message_visitor : public nano::message_visitor
 {
 public:
@@ -375,12 +373,8 @@ public:
 	{
 	}
 
-	static constexpr std::string_view MESSAGE_LOG_STRING{ "[{:30}] Received '{:13}' for: [{}]" };
-
 	void keepalive (nano::keepalive const & message_a) override
 	{
-		nlogger.debug (MESSAGE_LOG_STRING, channel->to_string (), "keepalive", "");
-
 		node.network.merge_peers (message_a.peers);
 
 		// Check for special node port data
@@ -397,8 +391,6 @@ public:
 
 	void publish (nano::publish const & message_a) override
 	{
-		nlogger.debug (MESSAGE_LOG_STRING, channel->to_string (), "publish", message_a.block->hash ().to_string ());
-
 		if (!node.block_processor.full ())
 		{
 			node.process_active (message_a.block);
@@ -412,11 +404,6 @@ public:
 
 	void confirm_req (nano::confirm_req const & message_a) override
 	{
-		nlogger.debug (MESSAGE_LOG_STRING,
-		channel->to_string (),
-		"confirm_req",
-		(!message_a.roots_hashes.empty () ? message_a.roots_string () : message_a.block->hash ().to_string ()));
-
 		// Don't load nodes with disabled voting
 		if (node.config.enable_voting && node.wallets.reps ().voting > 0)
 		{
@@ -433,11 +420,6 @@ public:
 
 	void confirm_ack (nano::confirm_ack const & message_a) override
 	{
-		nlogger.debug (MESSAGE_LOG_STRING,
-		channel->to_string (),
-		"confirm_ack",
-		fmt::format ("hashes: {}, timestamp: {}", message_a.vote->hashes_string (), message_a.vote->timestamp ()));
-
 		if (!message_a.vote->account.is_zero ())
 		{
 			node.vote_processor.vote (message_a.vote, channel);
@@ -471,8 +453,6 @@ public:
 
 	void telemetry_req (nano::telemetry_req const & message_a) override
 	{
-		nlogger.debug (MESSAGE_LOG_STRING, channel->to_string (), "telemetry_req", "");
-
 		// Send an empty telemetry_ack if we do not want, just to acknowledge that we have received the message to
 		// remove any timeouts on the server side waiting for a message.
 		nano::telemetry_ack telemetry_ack{ node.network_params.network };
@@ -486,22 +466,16 @@ public:
 
 	void telemetry_ack (nano::telemetry_ack const & message_a) override
 	{
-		nlogger.debug (MESSAGE_LOG_STRING, channel->to_string (), "telemetry_ack", "");
-
 		node.telemetry.process (message_a, channel);
 	}
 
 	void asc_pull_req (nano::asc_pull_req const & message) override
 	{
-		nlogger.debug (MESSAGE_LOG_STRING, channel->to_string (), "asc_pull_req", message.id);
-
 		node.bootstrap_server.request (message, channel);
 	}
 
 	void asc_pull_ack (nano::asc_pull_ack const & message) override
 	{
-		nlogger.debug (MESSAGE_LOG_STRING, channel->to_string (), "asc_pull_ack", message.id);
-
 		node.ascendboot.process (message, channel);
 	}
 
@@ -515,6 +489,8 @@ private:
 void nano::network::process_message (nano::message const & message, std::shared_ptr<nano::transport::channel> const & channel)
 {
 	node.stats.inc (nano::stat::type::message, nano::to_stat_detail (message.header.type), nano::stat::dir::in);
+
+	nlogger.trace ("message received", nlogger::field ("message", message));
 
 	network_message_visitor visitor{ node, channel, nlogger_messages };
 	message.visit (visitor);
@@ -998,24 +974,4 @@ std::unique_ptr<nano::container_info_component> nano::syn_cookies::collect_conta
 	composite->add_component (std::make_unique<container_info_leaf> (container_info{ "syn_cookies", syn_cookies_count, sizeof (decltype (cookies)::value_type) }));
 	composite->add_component (std::make_unique<container_info_leaf> (container_info{ "syn_cookies_per_ip", syn_cookies_per_ip_count, sizeof (decltype (cookies_per_ip)::value_type) }));
 	return composite;
-}
-
-std::string nano::network::to_string (nano::networks network)
-{
-	switch (network)
-	{
-		case nano::networks::invalid:
-			return "invalid";
-		case nano::networks::nano_beta_network:
-			return "beta";
-		case nano::networks::nano_dev_network:
-			return "dev";
-		case nano::networks::nano_live_network:
-			return "live";
-		case nano::networks::nano_test_network:
-			return "test";
-			// default case intentionally omitted to cause warnings for unhandled enums
-	}
-
-	return "n/a";
 }

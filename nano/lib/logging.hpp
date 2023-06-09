@@ -4,8 +4,21 @@
 
 #include <initializer_list>
 #include <memory>
+#include <sstream>
 
 #include <spdlog/spdlog.h>
+
+namespace nano::log
+{
+enum class type
+{
+	_all = 0,
+	generic,
+	node,
+	network,
+	messages,
+};
+}
 
 namespace nano
 {
@@ -62,6 +75,43 @@ public:
 	void critical (spdlog::format_string_t<Args...> fmt, Args &&... args)
 	{
 		spd_logger->critical (fmt, std::forward<Args> (args)...);
+	}
+
+private:
+	template <class T>
+	struct arg
+	{
+		std::string_view name;
+		T const & value;
+
+		arg (std::string_view name_a, T const & value_a) :
+			name{ name_a },
+			value{ value_a }
+		{
+		}
+	};
+
+public:
+	template <class T>
+	static arg<T> field (std::string_view name, T const & value)
+	{
+		return { name, value };
+	}
+
+public:
+	template <typename... Args>
+	void trace (std::string_view message, Args &&... args)
+	{
+		if (!spd_logger->should_log (spdlog::level::trace))
+		{
+			return;
+		}
+
+		std::stringstream ss;
+		nano::object_stream obs{ ss };
+		(obs.write (args.name, args.value), ...);
+
+		spd_logger->trace ("\"{}\" {}", message, ss.str ());
 	}
 
 private:

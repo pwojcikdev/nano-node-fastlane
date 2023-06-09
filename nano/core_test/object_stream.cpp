@@ -17,57 +17,57 @@ TEST (object_stream, primitive)
 
 	{
 		nano::object_stream obs{ std::cout };
-		obs.write_value ("field_name", "field_value");
+		obs.write ("field_name", "field_value");
 
 		std::cout << std::endl;
 	}
 
 	{
 		nano::object_stream obs{ std::cout };
-		obs.write_value ("bool_field", true);
-		obs.write_value ("bool_field", false);
+		obs.write ("bool_field", true);
+		obs.write ("bool_field", false);
 
 		std::cout << std::endl;
 	}
 
 	{
 		nano::object_stream obs{ std::cout };
-		obs.write_value ("int_field", 1234);
-		obs.write_value ("int_field", -1234);
-		obs.write_value ("int_field", std::numeric_limits<int>::max ());
-		obs.write_value ("int_field", std::numeric_limits<int>::min ());
+		obs.write ("int_field", 1234);
+		obs.write ("int_field", -1234);
+		obs.write ("int_field", std::numeric_limits<int>::max ());
+		obs.write ("int_field", std::numeric_limits<int>::min ());
 
 		std::cout << std::endl;
 	}
 
 	{
 		nano::object_stream obs{ std::cout };
-		obs.write_value ("uint64_field", (uint64_t)1234);
-		obs.write_value ("uint64_field", (uint64_t)-1234);
-		obs.write_value ("uint64_field", std::numeric_limits<uint64_t>::max ());
-		obs.write_value ("uint64_field", std::numeric_limits<uint64_t>::min ());
+		obs.write ("uint64_field", (uint64_t)1234);
+		obs.write ("uint64_field", (uint64_t)-1234);
+		obs.write ("uint64_field", std::numeric_limits<uint64_t>::max ());
+		obs.write ("uint64_field", std::numeric_limits<uint64_t>::min ());
 
 		std::cout << std::endl;
 	}
 
 	{
 		nano::object_stream obs{ std::cout };
-		obs.write_value ("float_field", 1234.5678f);
-		obs.write_value ("float_field", -1234.5678f);
-		obs.write_value ("float_field", std::numeric_limits<float>::max ());
-		obs.write_value ("float_field", std::numeric_limits<float>::min ());
-		obs.write_value ("float_field", std::numeric_limits<float>::lowest ());
+		obs.write ("float_field", 1234.5678f);
+		obs.write ("float_field", -1234.5678f);
+		obs.write ("float_field", std::numeric_limits<float>::max ());
+		obs.write ("float_field", std::numeric_limits<float>::min ());
+		obs.write ("float_field", std::numeric_limits<float>::lowest ());
 
 		std::cout << std::endl;
 	}
 
 	{
 		nano::object_stream obs{ std::cout };
-		obs.write_value ("double_field", 1234.5678f);
-		obs.write_value ("double_field", -1234.5678f);
-		obs.write_value ("double_field", std::numeric_limits<double>::max ());
-		obs.write_value ("double_field", std::numeric_limits<double>::min ());
-		obs.write_value ("double_field", std::numeric_limits<double>::lowest ());
+		obs.write ("double_field", 1234.5678f);
+		obs.write ("double_field", -1234.5678f);
+		obs.write ("double_field", std::numeric_limits<double>::max ());
+		obs.write ("double_field", std::numeric_limits<double>::min ());
+		obs.write ("double_field", std::numeric_limits<double>::lowest ());
 
 		std::cout << std::endl;
 	}
@@ -83,11 +83,11 @@ TEST (object_stream, object_writer_basic)
 
 	{
 		nano::object_stream obs{ std::cout };
-		obs.write_object ("object_field", [] (nano::object_stream & obs) {
-			obs.write_value ("field1", "value1");
-			obs.write_value ("field2", "value2");
-			obs.write_value ("field3", true);
-			obs.write_value ("field4", 1234);
+		obs.write ("object_field", [] (nano::object_stream & obs) {
+			obs.write ("field1", "value1");
+			obs.write ("field2", "value2");
+			obs.write ("field3", true);
+			obs.write ("field4", 1234);
 		});
 
 		std::cout << std::endl;
@@ -104,18 +104,18 @@ TEST (object_stream, object_writer_nested)
 
 	{
 		nano::object_stream obs{ std::cout };
-		obs.write_object ("object_field", [] (nano::object_stream & obs) {
-			obs.write_value ("field1", "value1");
+		obs.write ("object_field", [] (nano::object_stream & obs) {
+			obs.write ("field1", "value1");
 
-			obs.write_object ("nested_object", [] (nano::object_stream & obs) {
-				obs.write_value ("nested_field1", "nested_value1");
-				obs.write_value ("nested_field2", false);
-				obs.write_value ("nested_field3", -1234);
+			obs.write ("nested_object", [] (nano::object_stream & obs) {
+				obs.write ("nested_field1", "nested_value1");
+				obs.write ("nested_field2", false);
+				obs.write ("nested_field3", -1234);
 			});
 
-			obs.write_value ("field2", "value2");
-			obs.write_value ("field3", true);
-			obs.write_value ("field4", 1234);
+			obs.write ("field2", "value2");
+			obs.write ("field3", true);
+			obs.write ("field4", 1234);
 		});
 
 		std::cout << std::endl;
@@ -135,8 +135,8 @@ public:
 
 	void operator() (nano::object_stream & obs) const
 	{
-		obs.write_value ("uint256_union_field", uint256_union_field);
-		obs.write_value ("block_hash", block_hash);
+		obs.write ("uint256_union_field", uint256_union_field);
+		obs.write ("block_hash", block_hash);
 	}
 };
 }
@@ -150,7 +150,7 @@ TEST (object_stream, object_basic)
 		nano::object_stream obs{ std::cout };
 
 		test_class_basic test_object{};
-		obs.write_object ("test_object", test_object);
+		obs.write ("test_object", test_object);
 
 		std::cout << std::endl;
 	}
@@ -171,9 +171,9 @@ public:
 
 	void operator() (nano::object_stream & obs) const
 	{
-		obs.write_value ("uint256_union_field", uint256_union_field);
-		obs.write_value ("block_hash", block_hash);
-		obs.write_object ("nested_object", nested_object);
+		obs.write ("uint256_union_field", uint256_union_field);
+		obs.write ("block_hash", block_hash);
+		obs.write ("nested_object", nested_object);
 	}
 };
 }
@@ -187,7 +187,7 @@ TEST (object_stream, object_nested)
 		nano::object_stream obs{ std::cout };
 
 		test_class_nested test_object{};
-		obs.write_object ("test_object", test_object);
+		obs.write ("test_object", test_object);
 
 		std::cout << std::endl;
 	}
@@ -203,10 +203,10 @@ TEST (object_stream, array_writer_basic)
 
 	{
 		nano::object_stream obs{ std::cout };
-		obs.write_array ("array_field", [] (nano::array_stream & ars) {
+		obs.write ("array_field", [] (nano::array_stream & ars) {
 			for (int n = 0; n < 10; ++n)
 			{
-				ars.write_value (n);
+				ars.write (n);
 			}
 		});
 
@@ -224,11 +224,11 @@ TEST (object_stream, array_writer_objects)
 
 	{
 		nano::object_stream obs{ std::cout };
-		obs.write_array ("array_field", [] (nano::array_stream & ars) {
+		obs.write ("array_field", [] (nano::array_stream & ars) {
 			for (int n = 0; n < 3; ++n)
 			{
 				test_class_basic test_object{};
-				ars.write_object (test_object);
+				ars.write (test_object);
 			}
 		});
 
@@ -252,7 +252,7 @@ TEST (object_stream, vote)
 		vote.hashes.push_back (nano::test::random_hash ());
 		vote.hashes.push_back (nano::test::random_hash ());
 
-		obs.write_object ("vote", vote);
+		obs.write ("vote", vote);
 	}
 
 	// Spacing

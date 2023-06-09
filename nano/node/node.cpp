@@ -425,7 +425,7 @@ nano::node::node (boost::asio::io_context & io_ctx_a, boost::filesystem::path co
 			}
 			ledger.bootstrap_weight_max_blocks = bootstrap_weights.first;
 			nlogger.info ("Initial bootstrap height: {}", ledger.bootstrap_weight_max_blocks);
-			nlogger.info ("Current ledger height:    {}", ledger.cache.block_count);
+			nlogger.info ("Current ledger height:    {}", ledger.cache.block_count.load ());
 
 			// Drop unchecked blocks if initial bootstrap is completed
 			if (!flags.disable_unchecked_drop && !use_bootstrap_weight && !flags.read_only)
@@ -635,7 +635,7 @@ void nano::node::start ()
 			network.port = tcp_listener.port;
 		}
 
-		nlogger.info ("Node peering port: {}", network.port);
+		nlogger.info ("Node peering port: {}", network.port.load ());
 	}
 
 	if (!flags.disable_backup)

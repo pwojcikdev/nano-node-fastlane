@@ -604,9 +604,9 @@ uint64_t nano::vote::packed_timestamp (uint64_t timestamp, uint8_t duration) con
 
 void nano::vote::operator() (nano::object_stream & obs) const
 {
-	obs.write_value ("account", account);
-	obs.write_value ("timestamp", timestamp_m);
-	obs.write_array_values ("hashes", hashes);
+	obs.write ("account", account);
+	obs.write ("timestamp", timestamp_m);
+	obs.write ("hashes", hashes);
 }
 
 nano::block_hash nano::iterate_vote_blocks_as_hash::operator() (nano::block_hash const & item) const

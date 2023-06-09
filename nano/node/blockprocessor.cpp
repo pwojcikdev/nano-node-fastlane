@@ -315,11 +315,11 @@ nano::process_return nano::block_processor::process_one (nano::write_transaction
 	nano::process_return result;
 	auto hash (block->hash ());
 	result = node.ledger.process (transaction_a, *block);
+	nlogger.trace ("block processed", nlogger::field ("result", result.code), nlogger::field ("block", block), nlogger::field ("forced", forced_a));
 	switch (result.code)
 	{
 		case nano::process_result::progress:
 		{
-			nlogger_process.debug ("Processing block: {}", hash.to_string ()); // TODO: Log full block
 			queue_unchecked (transaction_a, hash);
 			/* For send blocks check epoch open unchecked (gap pending).
 			For state blocks check only send subtype and only if block epoch is not last epoch.
@@ -334,80 +334,62 @@ nano::process_return nano::block_processor::process_one (nano::write_transaction
 		}
 		case nano::process_result::gap_previous:
 		{
-			nlogger_process.debug ("Gap previous: {}", hash.to_string ());
-
 			node.unchecked.put (block->previous (), block);
 			node.stats.inc (nano::stat::type::ledger, nano::stat::detail::gap_previous);
 			break;
 		}
 		case nano::process_result::gap_source:
 		{
-			nlogger_process.debug ("Gap source: {}", hash.to_string ());
-
 			node.unchecked.put (node.ledger.block_source (transaction_a, *block), block);
 			node.stats.inc (nano::stat::type::ledger, nano::stat::detail::gap_source);
 			break;
 		}
 		case nano::process_result::gap_epoch_open_pending:
 		{
-			nlogger_process.debug ("Gap pending entries for epoch open: {}", hash.to_string ());
-
 			node.unchecked.put (block->account (), block); // Specific unchecked key starting with epoch open block account public key
 			node.stats.inc (nano::stat::type::ledger, nano::stat::detail::gap_source);
 			break;
 		}
 		case nano::process_result::old:
 		{
-			nlogger_process.debug ("Old: {}", hash.to_string ());
-
 			node.stats.inc (nano::stat::type::ledger, nano::stat::detail::old);
 			break;
 		}
 		case nano::process_result::bad_signature:
 		{
-			nlogger_process.debug ("Bad signature: {}", hash.to_string ());
 			break;
 		}
 		case nano::process_result::negative_spend:
 		{
-			nlogger_process.debug ("Negative spend: {}", hash.to_string ());
 			break;
 		}
 		case nano::process_result::unreceivable:
 		{
-			nlogger_process.debug ("Unreceivable: {}", hash.to_string ());
 			break;
 		}
 		case nano::process_result::fork:
 		{
-			nlogger_process.debug ("Fork: {} [root: {}]", hash.to_string (), block->root ().to_string ());
-
 			node.stats.inc (nano::stat::type::ledger, nano::stat::detail::fork);
 			break;
 		}
 		case nano::process_result::opened_burn_account:
 		{
-			nlogger_process.debug ("Rejecting open block for burn account: {}", hash.to_string ());
 			break;
 		}
 		case nano::process_result::balance_mismatch:
 		{
-			nlogger_process.debug ("Balance mismatch: {}", hash.to_string ());
 			break;
 		}
 		case nano::process_result::representative_mismatch:
 		{
-			nlogger_process.debug ("Representative mismatch: {}", hash.to_string ());
 			break;
 		}
 		case nano::process_result::block_position:
 		{
-			nlogger_process.debug ("Block: {} cannot follow predecessor {}", hash.to_string (), block->previous ().to_string ());
 			break;
 		}
 		case nano::process_result::insufficient_work:
 		{
-			nlogger_process.debug ("Insufficient work for: {} [work: {}, difficulty: {}]", hash.to_string (), nano::to_string_hex (block->block_work ()), nano::to_string_hex (node.network_params.work.difficulty (*block)));
 			break;
 		}
 	}

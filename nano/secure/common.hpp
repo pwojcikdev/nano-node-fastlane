@@ -273,8 +273,6 @@ public:
 	 */
 	bool deserialize (nano::stream &);
 	bool validate () const;
-	boost::transform_iterator<nano::iterate_vote_blocks_as_hash, nano::vote_blocks_vec_iter> begin () const;
-	boost::transform_iterator<nano::iterate_vote_blocks_as_hash, nano::vote_blocks_vec_iter> end () const;
 	std::string to_json () const;
 	uint64_t timestamp () const;
 	uint8_t duration_bits () const;

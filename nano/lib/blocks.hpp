@@ -4,6 +4,7 @@
 #include <nano/lib/epoch.hpp>
 #include <nano/lib/errors.hpp>
 #include <nano/lib/numbers.hpp>
+#include <nano/lib/object_stream.hpp>
 #include <nano/lib/optional_ptr.hpp>
 #include <nano/lib/stream.hpp>
 #include <nano/lib/timer.hpp>
@@ -72,6 +73,7 @@ public:
 	nano::block_details details;
 	nano::epoch source_epoch{ nano::epoch::epoch_0 };
 };
+
 class block
 {
 public:
@@ -128,6 +130,9 @@ protected:
 
 private:
 	nano::block_hash generate_hash () const;
+
+public: // Logging
+	virtual void operator() (nano::object_stream &) const;
 };
 
 using block_list_t = std::vector<std::shared_ptr<nano::block>>;

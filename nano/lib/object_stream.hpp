@@ -4,8 +4,11 @@
 #include <iomanip>
 #include <memory>
 #include <ostream>
+#include <ranges>
 #include <string_view>
 #include <type_traits>
+
+#include <magic_enum.hpp>
 
 namespace nano
 {
@@ -33,12 +36,33 @@ struct object_stream_config
 	int precision{ 2 };
 };
 
+class object_stream;
+class array_stream;
+
+/*
+ * Concepts used for choosing the correct writing function
+ */
+
+template <typename T>
+concept object_streamable = requires (T const & obj, object_stream & obs) {
+	{
+		obj (obs)
+	};
+};
+
+template <typename T>
+concept array_streamable = requires (T const & obj, array_stream & ars) {
+	{
+		obj (ars)
+	};
+};
+
 class object_stream_base
 {
-	static constexpr object_stream_config default_config = {};
+	static constexpr object_stream_config DEFAULT_CONFIG = {};
 
 public:
-	object_stream_base (std::ostream & stream_a, object_stream_config const & config_a = default_config) :
+	explicit object_stream_base (std::ostream & stream_a, object_stream_config const & config_a = DEFAULT_CONFIG) :
 		stream{ stream_a },
 		config{ config_a }
 	{
@@ -48,18 +72,43 @@ protected:
 	std::ostream & stream;
 	const object_stream_config & config;
 
-protected:
+protected: // Writing
 	template <class Value>
-	void write (Value const & value);
+	void write_impl (Value const & value);
 
-protected: // Special cases
-	inline void write (bool const & value);
-	inline void write (int32_t const & value);
-	inline void write (uint32_t const & value);
-	inline void write (int64_t const & value);
-	inline void write (uint64_t const & value);
-	inline void write (float const & value);
-	inline void write (double const & value);
+	template <object_streamable Value>
+	void write_impl (Value const & value);
+
+	template <array_streamable Value>
+	void write_impl (Value const & value);
+
+	template <std::ranges::range Range>
+	void write_impl (Range const & container);
+
+protected: // Writing special cases
+	inline void write_impl (bool const & value);
+	inline void write_impl (int8_t const & value);
+	inline void write_impl (uint8_t const & value);
+	inline void write_impl (int16_t const & value);
+	inline void write_impl (uint16_t const & value);
+	inline void write_impl (int32_t const & value);
+	inline void write_impl (uint32_t const & value);
+	inline void write_impl (int64_t const & value);
+	inline void write_impl (uint64_t const & value);
+	inline void write_impl (float const & value);
+	inline void write_impl (double const & value);
+
+	template <class Value>
+	inline void write_impl (std::shared_ptr<Value> const & value);
+	template <class Value>
+	inline void write_impl (std::unique_ptr<Value> const & value);
+
+	template <class Value>
+	inline void write_impl (std::optional<Value> const & value);
+
+private:
+	template <class Opt>
+	inline void write_optional (Opt const & opt);
 
 protected:
 	inline void begin_field (std::string_view name, bool first);
@@ -86,28 +135,9 @@ public:
 
 	object_stream (object_stream const &) = delete;
 
-private:
-	template <class Writer>
-	void write_field (std::string_view name, Writer writer);
-
 public:
 	template <class Value>
-	void write_value (std::string_view name, Value const & value);
-
-	template <class Writer>
-	void write_object (std::string_view name, Writer writer);
-
-	template <class Writer>
-	void write_array (std::string_view name, Writer writer);
-
-	template <class Container, class Writer>
-	void write_array (std::string_view name, Container const & container, Writer writer);
-
-	template <class Container>
-	void write_array_objects (std::string_view name, Container const & container);
-
-	template <class Container>
-	void write_array_values (std::string_view name, Container const & container);
+	void write (std::string_view name, Value const & value);
 
 private:
 	bool first_field{ true };
@@ -121,28 +151,9 @@ public:
 
 	array_stream (array_stream const &) = delete;
 
-private:
-	template <class Writer>
-	void write_element (Writer writer);
-
 public:
 	template <class Value>
-	void write_value (Value const & value);
-
-	template <class Writer>
-	void write_object (Writer writer);
-
-	template <class Writer>
-	void write_array (Writer writer);
-
-	template <class Container, class Writer>
-	void write_array (Container const & container, Writer writer);
-
-	template <class Container>
-	void write_array_objects (std::string_view name, Container const & container);
-
-	template <class Container>
-	void write_array_values (std::string_view name, Container const & container);
+	void write (Value const & value);
 
 private:
 	bool first_element{ true };
@@ -155,77 +166,150 @@ public:
 	using object_stream_base::object_stream_base;
 
 public:
-	template <class Writer>
-	void write_object (Writer writer);
-
-	template <class Writer>
-	void write_array (Writer writer);
-
-	template <class Container, class Writer>
-	void write_array (Container const & container, Writer writer);
-
-	template <class Container>
-	void write_array_objects (Container const & container);
-
-	template <class Container>
-	void write_array_values (Container const & container);
+	template <class Value>
+	void write (Value const & value);
 };
 
 /*
- * object_stream_base
+ * Impl
  */
 
 template <class Value>
-void object_stream_base::write (Value const & value)
+void object_stream_base::write_impl (Value const & value)
 {
+	using magic_enum::ostream_operators::operator<<; // Support ostream operator for all enums
+
 	begin_string ();
 
-	// write value
 	stream << value;
 
 	end_string ();
 }
 
-void nano::object_stream_base::write (bool const & value)
+template <object_streamable Value>
+void object_stream_base::write_impl (Value const & value)
+{
+	begin_object ();
+
+	object_stream obs{ stream, config };
+	value (obs);
+
+	end_object ();
+}
+
+template <array_streamable Value>
+void object_stream_base::write_impl (Value const & value)
+{
+	begin_array ();
+
+	array_stream ars{ stream, config };
+	value (ars);
+
+	end_array ();
+}
+
+template <std::ranges::range Range>
+void object_stream_base::write_impl (Range const & container)
+{
+	write_impl ([&container] (array_stream & ars) {
+		for (auto const & el : container)
+		{
+			ars.write (el);
+		}
+	});
+}
+
+void object_stream_base::write_impl (bool const & value)
 {
 	stream << (value ? "true" : "false");
 }
 
-void nano::object_stream_base::write (const int32_t & value)
+void object_stream_base::write_impl (const int8_t & value)
+{
+	stream << static_cast<uint32_t> (value); // Avoid printing as char
+}
+
+void object_stream_base::write_impl (const uint8_t & value)
+{
+	stream << static_cast<uint32_t> (value); // Avoid printing as char
+}
+
+void object_stream_base::write_impl (const int16_t & value)
 {
 	stream << value;
 }
 
-void nano::object_stream_base::write (const uint32_t & value)
+void object_stream_base::write_impl (const uint16_t & value)
 {
 	stream << value;
 }
 
-void nano::object_stream_base::write (const int64_t & value)
+void object_stream_base::write_impl (const int32_t & value)
 {
 	stream << value;
 }
 
-void nano::object_stream_base::write (const uint64_t & value)
+void object_stream_base::write_impl (const uint32_t & value)
 {
 	stream << value;
 }
 
-void nano::object_stream_base::write (const float & value)
+void object_stream_base::write_impl (const int64_t & value)
+{
+	stream << value;
+}
+
+void object_stream_base::write_impl (const uint64_t & value)
+{
+	stream << value;
+}
+
+void object_stream_base::write_impl (const float & value)
 {
 	stream << std::fixed << std::setprecision (config.precision) << value;
 }
 
-void nano::object_stream_base::write (const double & value)
+void object_stream_base::write_impl (const double & value)
 {
 	stream << std::fixed << std::setprecision (config.precision) << value;
+}
+
+template <class Opt>
+void object_stream_base::write_optional (const Opt & opt)
+{
+	if (opt)
+	{
+		write_impl (*opt);
+	}
+	else
+	{
+		stream << "null";
+	}
+}
+
+template <class Value>
+void object_stream_base::write_impl (std::shared_ptr<Value> const & value)
+{
+	write_optional (value);
+}
+
+template <class Value>
+void object_stream_base::write_impl (std::unique_ptr<Value> const & value)
+{
+	write_optional (value);
+}
+
+template <class Value>
+void object_stream_base::write_impl (const std::optional<Value> & value)
+{
+	write_optional (value);
 }
 
 /*
  * object_stream_base
  */
 
-void nano::object_stream_base::begin_field (std::string_view name, bool first)
+void object_stream_base::begin_field (std::string_view name, bool first)
 {
 	if (!first)
 	{
@@ -234,32 +318,32 @@ void nano::object_stream_base::begin_field (std::string_view name, bool first)
 	stream << config.field_begin << name << config.field_assignment;
 }
 
-void nano::object_stream_base::end_field ()
+void object_stream_base::end_field ()
 {
 	stream << config.field_end;
 }
 
-void nano::object_stream_base::begin_object ()
+void object_stream_base::begin_object ()
 {
 	stream << config.object_begin;
 }
 
-void nano::object_stream_base::end_object ()
+void object_stream_base::end_object ()
 {
 	stream << config.object_end;
 }
 
-void nano::object_stream_base::begin_array ()
+void object_stream_base::begin_array ()
 {
 	stream << config.array_begin;
 }
 
-void nano::object_stream_base::end_array ()
+void object_stream_base::end_array ()
 {
 	stream << config.array_end;
 }
 
-void nano::object_stream_base::begin_array_element (bool first)
+void object_stream_base::begin_array_element (bool first)
 {
 	if (!first)
 	{
@@ -268,17 +352,17 @@ void nano::object_stream_base::begin_array_element (bool first)
 	stream << config.array_element_begin;
 }
 
-void nano::object_stream_base::end_array_element ()
+void object_stream_base::end_array_element ()
 {
 	stream << config.array_element_end;
 }
 
-void nano::object_stream_base::begin_string ()
+void object_stream_base::begin_string ()
 {
 	stream << config.string_begin;
 }
 
-void nano::object_stream_base::end_string ()
+void object_stream_base::end_string ()
 {
 	stream << config.string_end;
 }
@@ -287,234 +371,59 @@ void nano::object_stream_base::end_string ()
  * object_stream
  */
 
-template <class Writer>
-void object_stream::write_field (std::string_view name, Writer writer)
+template <class Value>
+void object_stream::write (std::string_view name, Value const & value)
 {
 	begin_field (name, std::exchange (first_field, false));
 
-	// write value
-	writer ();
+	write_impl (value);
 
 	end_field ();
-}
-
-template <class Value>
-void object_stream::write_value (std::string_view name, Value const & value)
-{
-	write_field (name, [this, &value] () {
-		write (value);
-	});
-}
-
-template <class Writer>
-void object_stream::write_object (std::string_view name, Writer writer)
-{
-	write_field (name, [this, &writer] () {
-		begin_object ();
-
-		// write object
-		object_stream obs{ stream, config };
-		writer (obs);
-
-		end_object ();
-	});
-}
-
-template <class Writer>
-void object_stream::write_array (std::string_view name, Writer writer)
-{
-	write_field (name, [this, &writer] () {
-		begin_array ();
-
-		// write array
-		array_stream obs{ stream, config };
-		writer (obs);
-
-		end_array ();
-	});
-}
-
-template <class Container, class Writer>
-void object_stream::write_array (std::string_view name, Container const & container, Writer writer)
-{
-	write_array (name, [&container, &writer] (array_stream & ars) {
-		for (auto it = container.cbegin (); it != container.cend (); ++it)
-		{
-			// write array
-			writer (ars, *it);
-		}
-	});
-}
-
-template <class Container>
-void object_stream::write_array_objects (std::string_view name, Container const & container)
-{
-	write_array (name, container, [] (array_stream & ars, auto const & el) {
-		// write object
-		ars.write_object (el);
-	});
-}
-
-template <class Container>
-void object_stream::write_array_values (std::string_view name, Container const & container)
-{
-	write_array (name, container, [] (array_stream & ars, auto const & el) {
-		// write value
-		ars.write_value (el);
-	});
 }
 
 /*
  * array_stream
  */
 
-template <class Writer>
-void array_stream::write_element (Writer writer)
+template <class Value>
+void array_stream::write (Value const & value)
 {
 	begin_array_element (std::exchange (first_element, false));
 
-	// write value
-	writer ();
+	write_impl (value);
 
 	end_array_element ();
-}
-
-template <class Value>
-void array_stream::write_value (Value const & value)
-{
-	write_element ([this, &value] () {
-		write (value);
-	});
-}
-
-template <class Writer>
-void array_stream::write_object (Writer writer)
-{
-	write_element ([this, &writer] () {
-		begin_object ();
-
-		// write object
-		object_stream obs{ stream, config };
-		writer (obs);
-
-		end_object ();
-	});
-}
-
-template <class Writer>
-void array_stream::write_array (Writer writer)
-{
-	write_element ([this, &writer] () {
-		begin_array ();
-
-		// write array
-		array_stream obs{ stream, config };
-		writer (obs);
-
-		end_array ();
-	});
-}
-
-template <class Container, class Writer>
-void array_stream::write_array (Container const & container, Writer writer)
-{
-	write_array ([&container, &writer] (array_stream & ars) {
-		for (auto it = container.cbegin (); it != container.cend (); ++it)
-		{
-			// write array
-			writer (ars, *it);
-		}
-	});
-}
-
-template <class Container>
-void array_stream::write_array_objects (std::string_view name, Container const & container)
-{
-	write_array (name, container, [] (array_stream & ars, auto const & el) {
-		// write object
-		ars.write_object (el);
-	});
-}
-
-template <class Container>
-void array_stream::write_array_values (std::string_view name, Container const & container)
-{
-	write_array (name, container, [] (array_stream & ars, auto const & el) {
-		// write value
-		ars.write_value (el);
-	});
 }
 
 /*
  * root_object_stream
  */
 
-template <class Writer>
-void root_object_stream::write_object (Writer writer)
+template <class Value>
+void root_object_stream::write (Value const & value)
 {
-	begin_object ();
-
-	// write object
-	object_stream obs{ stream, config };
-	writer (obs);
-
-	end_object ();
+	write_impl (value);
 }
-
-template <class Writer>
-void root_object_stream::write_array (Writer writer)
-{
-	begin_array ();
-
-	// write array
-	array_stream obs{ stream, config };
-	writer (obs);
-
-	end_array ();
-}
-
-template <class Container, class Writer>
-void root_object_stream::write_array (Container const & container, Writer writer)
-{
-	write_array ([&container, &writer] (array_stream & ars) {
-		for (auto it = container.cbegin (); it != container.cend (); ++it)
-		{
-			// write array
-			writer (ars, *it);
-		}
-	});
-}
-
-template <class Container>
-void root_object_stream::write_array_objects (Container const & container)
-{
-	write_array (container, [] (array_stream & ars, auto const & el) {
-		// write object
-		ars.write_object (el);
-	});
-}
-
-template <class Container>
-void root_object_stream::write_array_values (Container const & container)
-{
-	write_array (container, [] (array_stream & ars, auto const & el) {
-		// write value
-		ars.write_value (el);
-	});
-}
-
 }
 
 /*
- * Adapter that allows printing via '<<' operator for all classes that implement object streaming
+ * Adapters that allow for printing via '<<' operator for all classes that implement object streaming
  */
 namespace nano
 {
-template <class Writer, typename = std::enable_if_t<std::is_invocable_v<Writer, nano::object_stream &>>>
-std::ostream & operator<< (std::ostream & os, Writer writer)
+template <object_streamable Value>
+std::ostream & operator<< (std::ostream & os, Value const & value)
 {
 	nano::root_object_stream obs{ os };
-	obs.write_object (writer);
+	obs.write (value);
+	return os;
+}
+
+template <array_streamable Value>
+std::ostream & operator<< (std::ostream & os, Value const & value)
+{
+	nano::root_object_stream obs{ os };
+	obs.write (value);
 	return os;
 }
 }

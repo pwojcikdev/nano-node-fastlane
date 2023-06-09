@@ -162,13 +162,6 @@ bool nano::uint256_union::is_zero () const
 	return qwords[0] == 0 && qwords[1] == 0 && qwords[2] == 0 && qwords[3] == 0;
 }
 
-std::ostream & nano::operator<< (std::ostream & os, const uint256_union & val)
-{
-	// TODO: Replace with streaming implementation
-	os << val.to_string ();
-	return os;
-}
-
 std::string nano::uint256_union::to_string () const
 {
 	std::string result;
@@ -908,6 +901,27 @@ std::string nano::to_string (double const value_a, int const precision_a)
 	stream << std::setprecision (precision_a) << std::fixed;
 	stream << value_a;
 	return stream.str ();
+}
+
+std::ostream & nano::operator<< (std::ostream & os, const uint128_union & val)
+{
+	// TODO: Replace with streaming implementation
+	os << val.to_string ();
+	return os;
+}
+
+std::ostream & nano::operator<< (std::ostream & os, const uint256_union & val)
+{
+	// TODO: Replace with streaming implementation
+	os << val.to_string ();
+	return os;
+}
+
+std::ostream & nano::operator<< (std::ostream & os, const uint512_union & val)
+{
+	// TODO: Replace with streaming implementation
+	os << val.to_string ();
+	return os;
 }
 
 #ifdef _WIN32

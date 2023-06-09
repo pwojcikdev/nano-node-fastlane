@@ -26,7 +26,6 @@ class write_database_queue;
 class block_processor final
 {
 	nano::nlogger nlogger{ "blockprocessor" };
-	nano::nlogger nlogger_process{ "blockprocessor::process" };
 
 public:
 	explicit block_processor (nano::node &, nano::write_database_queue &);

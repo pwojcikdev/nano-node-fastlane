@@ -110,8 +110,6 @@ inline bool operator< (nano::uint256_union const & lhs, nano::uint256_union cons
 }
 static_assert (std::is_nothrow_move_constructible<uint256_union>::value, "uint256_union should be noexcept MoveConstructible");
 
-std::ostream & operator<< (std::ostream & os, const uint256_union & val);
-
 class link;
 class root;
 class hash_or_account;
@@ -269,6 +267,11 @@ nano::public_key pub_key (nano::raw_key const &);
 std::string to_string_hex (uint64_t const);
 std::string to_string_hex (uint16_t const);
 bool from_string_hex (std::string const &, uint64_t &);
+
+/* Printing adapters */
+std::ostream & operator<< (std::ostream & os, const uint128_union & val);
+std::ostream & operator<< (std::ostream & os, const uint256_union & val);
+std::ostream & operator<< (std::ostream & os, const uint512_union & val);
 
 /**
  * Convert a double to string in fixed format

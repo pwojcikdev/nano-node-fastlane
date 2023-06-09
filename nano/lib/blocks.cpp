@@ -44,6 +44,10 @@ void nano::block_memory_pool_purge ()
 	nano::purge_shared_ptr_singleton_pool_memory<nano::change_block> ();
 }
 
+/*
+ * block
+ */
+
 std::string nano::block::to_json () const
 {
 	std::string result;
@@ -190,6 +194,16 @@ nano::amount const & nano::block::balance () const
 	static nano::amount amount{ 0 };
 	return amount;
 }
+
+void nano::block::operator() (nano::object_stream & obs) const
+{
+	obs.write ("type", nano::block_type::invalid);
+	obs.write ("hash", hash ());
+}
+
+/*
+ * send_block
+ */
 
 void nano::send_block::visit (nano::block_visitor & visitor_a) const
 {

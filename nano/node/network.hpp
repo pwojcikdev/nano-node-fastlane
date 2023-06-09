@@ -137,8 +137,6 @@ public:
 	std::optional<nano::node_id_handshake::query_payload> prepare_handshake_query (nano::endpoint const & remote_endpoint);
 	nano::node_id_handshake::response_payload prepare_handshake_response (nano::node_id_handshake::query_payload const & query, bool v2) const;
 
-	static std::string to_string (nano::networks);
-
 private:
 	void process_message (nano::message const &, std::shared_ptr<nano::transport::channel> const &);
 
@@ -161,5 +159,6 @@ public:
 	static std::size_t const confirm_req_hashes_max = 7;
 	static std::size_t const confirm_ack_hashes_max = 12;
 };
+
 std::unique_ptr<container_info_component> collect_container_info (network & network, std::string const & name);
 }

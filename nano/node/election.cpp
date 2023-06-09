@@ -681,14 +681,15 @@ void nano::election::operator() (nano::object_stream & obs)
 {
 	nano::lock_guard<nano::mutex> guard{ mutex };
 
-	obs.write_value ("winner", status.winner->hash ().to_string ());
-	obs.write_value ("tally", status.tally.to_string_dec ());
-	obs.write_value ("final_tally", status.final_tally.to_string_dec ());
+	// TODO: Remove the need for .to_string () calls
+	obs.write ("winner", status.winner->hash ().to_string ());
+	obs.write ("tally", status.tally.to_string_dec ());
+	obs.write ("final_tally", status.final_tally.to_string_dec ());
 
-	obs.write_array ("blocks", last_blocks, [] (nano::array_stream & ars, auto & entry) {
-		ars.write_object ([&entry] (nano::object_stream & obs2) {
+	obs.write ("blocks", std::views::transform (last_blocks, [] (auto const & entry) {
+		return [&entry] (nano::object_stream & obs) {
 			auto [hash, block] = entry;
-			obs2.write_value ("hash", hash.to_string ());
-		});
-	});
+			obs.write ("hash", hash.to_string ());
+		};
+	}));
 }
