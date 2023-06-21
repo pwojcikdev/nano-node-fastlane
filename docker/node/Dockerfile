@@ -2,6 +2,9 @@ FROM ubuntu:22.04 as builder
 
 ARG COMPILER=gcc
 ARG NANO_NETWORK=live
+ARG CI_TAG=DEV_BUILD
+ARG CI_BUILD=OFF
+ARG CI_VERSION_PRE_RELEASE=OFF
 
 # Install build dependencies
 COPY ./ci/prepare/linux /tmp/prepare
