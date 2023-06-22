@@ -245,8 +245,9 @@ auto nano::block_processor::process_batch (nano::unique_lock<nano::mutex> & lock
 		if ((blocks.size () + state_block_signature_verification.size () + forced.size () > 64) && should_log ())
 		{
 			// TODO: Cleaner periodic logging
-			nlogger.debug ("{} blocks [+ {} state blocks] [+ {} forced] in processing queue", blocks.size (), state_block_signature_verification.size (), forced.size ());
+			nlogger.log (nano::log::type::blockprocessor).debug ("{} blocks [+ {} state blocks] [+ {} forced] in processing queue", blocks.size (), state_block_signature_verification.size (), forced.size ());
 		}
+
 		std::shared_ptr<nano::block> block;
 		nano::block_hash hash (0);
 		bool force (false);
@@ -271,17 +272,17 @@ auto nano::block_processor::process_batch (nano::unique_lock<nano::mutex> & lock
 			if (successor != nullptr && successor->hash () != hash)
 			{
 				// Replace our block with the winner and roll back any dependent blocks
-				nlogger.debug ("Rolling back: {} and replacing with: {}", successor->hash ().to_string (), hash.to_string ());
+				nlogger.log (nano::log::type::blockprocessor).debug ("Rolling back: {} and replacing with: {}", successor->hash ().to_string (), hash.to_string ());
 
 				std::vector<std::shared_ptr<nano::block>> rollback_list;
 				if (node.ledger.rollback (transaction, successor->hash (), rollback_list))
 				{
-					nlogger.error ("Failed to roll back: {} because it or a successor was confirmed", successor->hash ().to_string ());
+					nlogger.log (nano::log::type::blockprocessor).error ("Failed to roll back: {} because it or a successor was confirmed", successor->hash ().to_string ());
 					node.stats.inc (nano::stat::type::ledger, nano::stat::detail::rollback_failed);
 				}
 				else
 				{
-					nlogger.debug ("Blocks rolled back: {}", rollback_list.size ());
+					nlogger.log (nano::log::type::blockprocessor).debug ("Blocks rolled back: {}", rollback_list.size ());
 				}
 
 				// Deleting from votes cache, stop active transaction
@@ -305,7 +306,7 @@ auto nano::block_processor::process_batch (nano::unique_lock<nano::mutex> & lock
 
 	if (number_of_blocks_processed != 0 && timer_l.stop () > std::chrono::milliseconds (100))
 	{
-		nlogger.debug ("Processed {} blocks ({} forced) in {}{}", number_of_blocks_processed, number_of_forced_processed, timer_l.value ().count (), timer_l.unit ());
+		nlogger.log (nano::log::type::blockprocessor).debug ("Processed {} blocks ({} forced) in {}{}", number_of_blocks_processed, number_of_forced_processed, timer_l.value ().count (), timer_l.unit ());
 	}
 	return processed;
 }
@@ -315,7 +316,7 @@ nano::process_return nano::block_processor::process_one (nano::write_transaction
 	nano::process_return result;
 	auto hash (block->hash ());
 	result = node.ledger.process (transaction_a, *block);
-	nlogger.trace ("block processed", nlogger::field ("result", result.code), nlogger::field ("block", block), nlogger::field ("forced", forced_a));
+	nlogger.log (nano::log::type::blockprocessor).trace ("block processed", nlogger::field ("result", result.code), nlogger::field ("block", block), nlogger::field ("forced", forced_a));
 	switch (result.code)
 	{
 		case nano::process_result::progress:

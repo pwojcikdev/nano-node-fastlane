@@ -50,6 +50,7 @@ add_library(
   logger_mt.hpp
   logging.hpp
   logging.cpp
+        logging_enums.hpp
   memory.hpp
   memory.cpp
   numbers.hpp
