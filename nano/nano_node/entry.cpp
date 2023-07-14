@@ -280,14 +280,14 @@ int main (int argc, char * const * argv)
 				{
 					if (sample.diff > log_threshold)
 					{
-						node->logger.always_log (sample.get_entry ());
+						std::cout << '\t' << sample.get_entry () << '\n';
 					}
 				}
 				for (auto const & newcomer : newcomers)
 				{
 					if (newcomer.second > log_threshold)
 					{
-						node->logger.always_log (newcomer_entry (newcomer));
+						std::cout << '\t' << newcomer_entry (newcomer) << '\n';
 					}
 				}
 			}
@@ -1903,7 +1903,11 @@ int main (int argc, char * const * argv)
 			}
 #endif
 			auto inactive_node = nano::default_inactive_node (data_path, vm);
-			inactive_node->node->logger.always_log (nano::severity_level::error, "Testing system logger");
+			inactive_node->node->nlogger.critical ({}, "Testing system logger (CRITICAL)");
+			inactive_node->node->nlogger.error ({}, "Testing system logger (ERROR)");
+			inactive_node->node->nlogger.warn ({}, "Testing system logger (WARN)");
+			inactive_node->node->nlogger.info ({}, "Testing system logger (INFO)");
+			inactive_node->node->nlogger.debug ({}, "Testing system logger (DEBUG)");
 		}
 		else if (vm.count ("debug_account_versions"))
 		{

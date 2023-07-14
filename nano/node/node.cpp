@@ -90,7 +90,7 @@ void nano::node::keepalive (std::string const & address_a, uint16_t port_a)
 		}
 		else
 		{
-			node_l->nlogger.error (nano::log::tag::node, "Error resolving address: {}:{} [{}]", address_a, port_a, ec.message ());
+			node_l->nlogger.error (nano::log::tag::node, "Error resolving address for keepalive: {}:{} [{}]", address_a, port_a, ec.message ());
 		}
 	});
 }
@@ -1359,6 +1359,8 @@ void nano::node::process_confirmed (nano::election_status const & status_a, uint
 	decltype (iteration_a) const num_iters = (config.block_processor_batch_max_time / network_params.node.process_confirmed_interval) * 4;
 	if (auto block_l = ledger.store.block.get (ledger.store.tx_begin_read (), hash))
 	{
+		nlogger.trace (nano::log::tag::node, nano::log::detail::process_confirmed, nlogger::entry{ "block", block_l });
+
 		active.recently_confirmed.put (block_l->qualified_root (), hash);
 		confirmation_height_processor.add (block_l);
 	}

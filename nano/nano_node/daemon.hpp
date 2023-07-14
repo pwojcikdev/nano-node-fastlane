@@ -14,7 +14,7 @@ class node_flags;
 
 class daemon
 {
-	nano::nlogger nlogger{ "daemon" };
+	nano::nlogger nlogger;
 
 public:
 	void run (boost::filesystem::path const &, nano::node_flags const & flags);

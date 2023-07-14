@@ -127,12 +127,11 @@ void nano::network::send_node_id_handshake (std::shared_ptr<nano::transport::cha
 
 	nano::node_id_handshake message{ node.network_params.network, query, response };
 
-	node.nlogger.debug (nano::log::tag::network, "Node ID handshake sent with node id: {} to {} [query: {}, respond to: {}, signature: {}]",
-	node.node_id.pub.to_node_id (),
+	node.nlogger.debug (nano::log::tag::network, "Node ID handshake sent to: {} (query: {}, respond to: {}, signature: {})",
 	nano::util::to_str (channel_a->get_endpoint ()),
-	(query ? query->cookie.to_string () : std::string{ "<none>" }),
-	(respond_to ? respond_to->to_string () : std::string{ "<none>" }),
-	(response ? response->signature.to_string () : std::string{ "<none>" }));
+	(query ? query->cookie.to_string () : "<none>"),
+	(respond_to ? respond_to->to_string () : "<none>"),
+	(response ? response->signature.to_string () : "<none>"));
 
 	channel_a->send (message);
 }

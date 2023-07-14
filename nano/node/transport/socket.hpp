@@ -4,6 +4,7 @@
 #include <nano/boost/asio/strand.hpp>
 #include <nano/lib/asio.hpp>
 #include <nano/lib/locks.hpp>
+#include <nano/lib/logging.hpp>
 #include <nano/lib/timer.hpp>
 #include <nano/node/transport/traffic_type.hpp>
 
@@ -207,6 +208,9 @@ private:
 
 public:
 	std::size_t const max_queue_size;
+
+public: // Logging
+	virtual void operator() (nano::object_stream &) const;
 };
 
 std::string socket_type_to_string (socket::type_t type);

@@ -245,7 +245,7 @@ auto nano::block_processor::process_batch (nano::unique_lock<nano::mutex> & lock
 		// TODO: Cleaner periodical logging
 		if ((blocks.size () + state_block_signature_verification.size () + forced.size () > 64) && should_log ())
 		{
-			node.nlogger.debug (nano::log::tag::blockprocessor, "{} blocks [+ {} state blocks] [+ {} forced] in processing queue", blocks.size (), state_block_signature_verification.size (), forced.size ());
+			node.nlogger.debug (nano::log::tag::blockprocessor, "{} blocks (+ {} state blocks) (+ {} forced) in processing queue", blocks.size (), state_block_signature_verification.size (), forced.size ());
 		}
 
 		std::shared_ptr<nano::block> block;
@@ -306,8 +306,9 @@ auto nano::block_processor::process_batch (nano::unique_lock<nano::mutex> & lock
 
 	if (number_of_blocks_processed != 0 && timer_l.stop () > std::chrono::milliseconds (100))
 	{
-		node.nlogger.debug (nano::log::tag::blockprocessor, "Processed {} blocks ({} forced) in {}{}", number_of_blocks_processed, number_of_forced_processed, timer_l.value ().count (), timer_l.unit ());
+		node.nlogger.debug (nano::log::tag::blockprocessor, "Processed {} blocks ({} forced) in {} {}", number_of_blocks_processed, number_of_forced_processed, timer_l.value ().count (), timer_l.unit ());
 	}
+
 	return processed;
 }
 
@@ -317,8 +318,11 @@ nano::process_return nano::block_processor::process_one (nano::write_transaction
 	auto hash (block->hash ());
 	result = node.ledger.process (transaction_a, *block);
 
-	node.nlogger.trace (nano::log::tag::blockprocessor, nano::log::detail::block_processed, nlogger::field ("result", result.code), nlogger::field ("block", block), nlogger::field ("forced", forced_a));
 	node.stats.inc (nano::stat::type::blockprocessor, nano::to_stat_detail (result.code));
+	node.nlogger.trace (nano::log::tag::blockprocessor, nano::log::detail::block_processed,
+	nlogger::field ("result", result.code),
+	nlogger::field ("block", block),
+	nlogger::field ("forced", forced_a));
 
 	switch (result.code)
 	{

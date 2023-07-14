@@ -218,7 +218,7 @@ void nano::daemon::run (boost::filesystem::path const & data_path, nano::node_fl
 		}
 		catch (std::runtime_error const & e)
 		{
-			nlogger.critical (nano::log::tag::daemon, "Error while running node [{}]", e.what ());
+			nlogger.critical (nano::log::tag::daemon, "Error while running node: {}", e.what ());
 		}
 	}
 	else
@@ -226,5 +226,5 @@ void nano::daemon::run (boost::filesystem::path const & data_path, nano::node_fl
 		nlogger.critical (nano::log::tag::daemon, "Error deserializing config: {}", error.get_message ());
 	}
 
-	nlogger.info (nano::log::tag::daemon, "Daemon exiting");
+	nlogger.info (nano::log::tag::daemon, "Daemon exiting...");
 }

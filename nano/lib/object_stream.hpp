@@ -107,6 +107,8 @@ protected: // Writing special cases
 	template <class Value>
 	inline void write_impl (std::unique_ptr<Value> const & value);
 	template <class Value>
+	inline void write_impl (std::weak_ptr<Value> const & value);
+	template <class Value>
 	inline void write_impl (std::optional<Value> const & value);
 
 private:
@@ -290,6 +292,12 @@ template <class Value>
 void object_stream_base::write_impl (std::unique_ptr<Value> const & value)
 {
 	write_optional (value);
+}
+
+template <class Value>
+void object_stream_base::write_impl (std::weak_ptr<Value> const & value)
+{
+	write_optional (value.lock ());
 }
 
 template <class Value>

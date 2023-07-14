@@ -677,19 +677,22 @@ nano::election_behavior nano::election::behavior () const
 	return behavior_m;
 }
 
-void nano::election::operator() (nano::object_stream & obs)
+void nano::election::operator() (nano::object_stream & obs) const
 {
 	nano::lock_guard<nano::mutex> guard{ mutex };
 
 	// TODO: Remove the need for .to_string () calls
+	obs.write ("root", qualified_root.to_string ());
+	obs.write ("behaviour", behavior_m);
+	obs.write ("state", state_m.load ());
+	obs.write ("confirmed", confirmed ());
+
 	obs.write ("winner", status.winner->hash ().to_string ());
 	obs.write ("tally", status.tally.to_string_dec ());
 	obs.write ("final_tally", status.final_tally.to_string_dec ());
 
 	obs.write ("blocks", std::views::transform (last_blocks, [] (auto const & entry) {
-		return [&entry] (nano::object_stream & obs) {
-			auto [hash, block] = entry;
-			obs.write ("hash", hash.to_string ());
-		};
+		auto [hash, block] = entry;
+		return block;
 	}));
 }

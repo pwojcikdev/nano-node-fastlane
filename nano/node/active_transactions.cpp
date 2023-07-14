@@ -270,7 +270,6 @@ void nano::active_transactions::cleanup_election (nano::unique_lock<nano::mutex>
 	debug_assert (!mutex.try_lock ());
 	debug_assert (lock_a.owns_lock ());
 
-	node.stats.inc (completion_type (*election), nano::to_stat_detail (election->behavior ()));
 	// Keep track of election count by election type
 	debug_assert (count_by_behavior[election->behavior ()] > 0);
 	count_by_behavior[election->behavior ()]--;
@@ -283,10 +282,16 @@ void nano::active_transactions::cleanup_election (nano::unique_lock<nano::mutex>
 		debug_assert (erased == 1);
 		node.inactive_vote_cache.erase (hash);
 	}
+
 	roots.get<tag_root> ().erase (roots.get<tag_root> ().find (election->qualified_root));
 
 	lock_a.unlock ();
+
+	node.stats.inc (completion_type (*election), nano::to_stat_detail (election->behavior ()));
+	node.nlogger.trace (nano::log::tag::active_transactions, nano::log::detail::active_stopped, nano::nlogger::arg{ "election", election });
+
 	vacancy_update ();
+
 	for (auto const & [hash, block] : blocks_l)
 	{
 		// Notify observers about dropped elections & blocks lost confirmed elections
@@ -300,11 +305,6 @@ void nano::active_transactions::cleanup_election (nano::unique_lock<nano::mutex>
 			// Clear from publish filter
 			node.network.publish_filter.clear (block);
 		}
-	}
-
-	if (node.config.logging.election_result_logging ())
-	{
-		node.logger.try_log (boost::str (boost::format ("Election erased for root %1%, confirmed: %2$b") % election->qualified_root.to_string () % election->confirmed ()));
 	}
 }
 
@@ -411,6 +411,7 @@ nano::election_insertion_result nano::active_transactions::insert_impl (nano::un
 				election_behavior_a);
 				roots.get<tag_root> ().emplace (nano::active_transactions::conflict_info{ root, result.election });
 				blocks.emplace (hash, result.election);
+
 				// Keep track of election count by election type
 				debug_assert (count_by_behavior[result.election->behavior ()] >= 0);
 				count_by_behavior[result.election->behavior ()]++;
@@ -420,8 +421,12 @@ nano::election_insertion_result nano::active_transactions::insert_impl (nano::un
 				{
 					cache->fill (result.election);
 				}
+
 				node.stats.inc (nano::stat::type::active_started, nano::to_stat_detail (election_behavior_a));
+				node.nlogger.trace (nano::log::tag::active_transactions, nano::log::detail::active_started, nano::nlogger::arg{ "election", result.election });
+
 				node.observers.active_started.notify (hash);
+
 				vacancy_update ();
 			}
 		}

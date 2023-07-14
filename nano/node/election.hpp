@@ -1,6 +1,6 @@
 #pragma once
 
-#include <nano/lib/object_stream.hpp>
+#include <nano/lib/logging.hpp>
 #include <nano/secure/common.hpp>
 #include <nano/secure/ledger.hpp>
 #include <nano/secure/store.hpp>
@@ -212,6 +212,6 @@ public: // Only used in tests
 	friend class votes_add_old_Test;
 
 public: // Logging
-	void operator() (nano::object_stream &);
+	void operator() (nano::object_stream &) const;
 };
 }

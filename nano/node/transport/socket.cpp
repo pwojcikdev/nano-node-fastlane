@@ -437,6 +437,12 @@ bool nano::transport::socket::write_queue::empty () const
 	});
 }
 
+void nano::transport::socket::operator() (nano::object_stream & obs) const
+{
+	obs.write ("remote_endpoint", remote_endpoint ());
+	obs.write ("local_endpoint", local_endpoint ());
+}
+
 /*
  * server_socket
  */

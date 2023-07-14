@@ -98,7 +98,7 @@ void nano::transport::channel_tcp::send_buffer (nano::shared_const_buffer const 
 
 std::string nano::transport::channel_tcp::to_string () const
 {
-	return boost::str (boost::format ("%1%") % get_tcp_endpoint ());
+	return nano::util::to_str (get_tcp_endpoint ());
 }
 
 void nano::transport::channel_tcp::set_endpoint ()
@@ -110,6 +110,13 @@ void nano::transport::channel_tcp::set_endpoint ()
 	{
 		endpoint = socket_l->remote_endpoint ();
 	}
+}
+
+void nano::transport::channel_tcp::operator() (nano::object_stream & obs) const
+{
+	nano::transport::channel::operator() (obs); // Write common data
+
+	obs.write ("socket", socket);
 }
 
 /*
@@ -555,10 +562,9 @@ void nano::transport::tcp_channels::start_tcp (nano::endpoint const & endpoint_a
 				auto query = node_l->network.prepare_handshake_query (endpoint_a);
 				nano::node_id_handshake message{ node_l->network_params.network, query };
 
-				if (node_l->config.logging.network_node_id_handshake_logging ())
-				{
-					node_l->logger.try_log (boost::str (boost::format ("Node ID handshake request sent with node ID %1% to %2%: query %3%") % node_l->node_id.pub.to_node_id () % endpoint_a % (query ? query->cookie.to_string () : "not set")));
-				}
+				node_l->nlogger.debug (nano::log::tag::tcp, "Node ID handshake sent to: {} (query: {})",
+				nano::util::to_str (endpoint_a),
+				(query ? query->cookie.to_string () : "<none>"));
 
 				channel->set_endpoint ();
 				std::shared_ptr<std::vector<uint8_t>> receive_buffer (std::make_shared<std::vector<uint8_t>> ());
