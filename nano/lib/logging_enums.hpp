@@ -30,6 +30,7 @@ enum class tag
 	rpc_request,
 	ipc,
 	ipc_server,
+	websocket,
 	active_transactions,
 	blockprocessor,
 	network,

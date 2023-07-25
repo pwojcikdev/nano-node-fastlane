@@ -200,7 +200,7 @@ nano::node::node (boost::asio::io_context & io_ctx_a, boost::filesystem::path co
 	wallets (wallets_store.init_error (), *this),
 	backlog{ nano::backlog_population_config (config), store, stats },
 	ascendboot{ config, block_processor, ledger, network, stats },
-	websocket{ config.websocket_config, observers, wallets, ledger, io_ctx, logger },
+	websocket{ config.websocket_config, observers, wallets, ledger, io_ctx, nlogger },
 	epoch_upgrader{ *this, ledger, store, network_params, nlogger },
 	startup_time (std::chrono::steady_clock::now ()),
 	node_seq (seq),
