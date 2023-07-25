@@ -80,6 +80,8 @@ enum class detail
 
 	// network
 	message_received,
+	message_sent,
+	message_dropped,
 
 	// bulk pull/push
 	pulled_block,
