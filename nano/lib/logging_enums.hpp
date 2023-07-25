@@ -16,7 +16,7 @@ enum class level
 	off,
 };
 
-enum class tag : uint32_t
+enum class tag
 {
 	all = 0, // reserved
 
@@ -28,6 +28,8 @@ enum class tag : uint32_t
 	rpc_connection,
 	rpc_callbacks,
 	rpc_request,
+	ipc,
+	ipc_server,
 	active_transactions,
 	blockprocessor,
 	network,
@@ -36,6 +38,10 @@ enum class tag : uint32_t
 	conf_processor_bounded,
 	conf_processor_unbounded,
 	distributed_work,
+	epoch_upgrader,
+	opencl_work,
+	upnp,
+	repcrawler,
 	bulk_pull_client,
 	bulk_pull_server,
 	bulk_pull_account_client,
@@ -46,6 +52,13 @@ enum class tag : uint32_t
 	frontier_req_server,
 	bootstrap,
 	bootstrap_lazy,
+};
+
+enum class category
+{
+	all = 0, // reserved
+
+	work_generation,
 };
 
 enum class detail

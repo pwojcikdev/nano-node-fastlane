@@ -343,6 +343,13 @@ void nano::distributed_work::set_once (uint64_t const work_a, std::string const 
 	if (!finished.exchange (true))
 	{
 		elapsed.stop ();
+
+		node.nlogger.info (nano::log::tag::distributed_work, "Work generation for {}, with a threshold difficulty of {} (multiplier {}x) complete: {} ms",
+		request.root.to_string (),
+		nano::to_string_hex (request.difficulty),
+		nano::to_string (nano::difficulty::to_multiplier (request.difficulty, node.default_difficulty (request.version)), 2),
+		elapsed.value ().count ());
+
 		status = work_generation_status::success;
 		if (request.callback)
 		{
@@ -350,12 +357,6 @@ void nano::distributed_work::set_once (uint64_t const work_a, std::string const 
 		}
 		winner = source_a;
 		work_result = work_a;
-		if (node.config.logging.work_generation_time ())
-		{
-			boost::format unformatted_l ("Work generation for %1%, with a threshold difficulty of %2% (multiplier %3%x) complete: %4% ms");
-			auto multiplier_text_l (nano::to_string (nano::difficulty::to_multiplier (request.difficulty, node.default_difficulty (request.version)), 2));
-			node.logger.try_log (boost::str (unformatted_l % request.root.to_string () % nano::to_string_hex (request.difficulty) % multiplier_text_l % elapsed.value ().count ()));
-		}
 	}
 }
 
@@ -364,16 +365,17 @@ void nano::distributed_work::cancel ()
 	if (!finished.exchange (true))
 	{
 		elapsed.stop ();
+
+		node.nlogger.info (nano::log::tag::distributed_work, "Work generation for {} was cancelled after {} ms",
+		request.root.to_string (),
+		elapsed.value ().count ());
+
 		status = work_generation_status::cancelled;
 		if (request.callback)
 		{
 			request.callback (boost::none);
 		}
 		stop_once (true);
-		if (node.config.logging.work_generation_time ())
-		{
-			node.logger.try_log (boost::str (boost::format ("Work generation for %1% was cancelled after %2% ms") % request.root.to_string () % elapsed.value ().count ()));
-		}
 	}
 }
 
@@ -392,11 +394,12 @@ void nano::distributed_work::handle_failure ()
 		node.unresponsive_work_peers = true;
 		if (!local_generation_started && !finished.exchange (true))
 		{
+			node.nlogger.info (nano::log::tag::distributed_work, "Work peer(s) failed to generate work for root {}, retrying... (backoff: {}s)",
+			request.root.to_string (),
+			backoff.count ());
+
 			status = work_generation_status::failure_peers;
-			if (backoff == std::chrono::seconds (1) && node.config.logging.work_generation_time ())
-			{
-				node.logger.always_log ("Work peer(s) failed to generate work for root ", request.root.to_string (), ", retrying...");
-			}
+
 			auto now (std::chrono::steady_clock::now ());
 			std::weak_ptr<nano::node> node_weak (node.shared ());
 			auto next_backoff (std::min (backoff * 2, std::chrono::seconds (5 * 60)));

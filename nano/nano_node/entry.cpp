@@ -609,9 +609,9 @@ int main (int argc, char * const * argv)
 						error |= device >= environment.platforms[platform].devices.size ();
 						if (!error)
 						{
-							nano::logger_mt logger;
+							nano::nlogger nlogger;
 							nano::opencl_config config (platform, device, threads);
-							auto opencl (nano::opencl_work::create (true, config, logger, network_params.work));
+							auto opencl (nano::opencl_work::create (true, config, nlogger, network_params.work));
 							nano::work_pool work_pool{ network_params.network, 0, std::chrono::nanoseconds (0), opencl ? [&opencl] (nano::work_version const version_a, nano::root const & root_a, uint64_t difficulty_a, std::atomic<int> &) {
 														  return opencl->generate_work (version_a, root_a, difficulty_a);
 													  }

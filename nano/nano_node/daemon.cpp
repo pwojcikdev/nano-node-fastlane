@@ -96,7 +96,7 @@ void nano::daemon::run (boost::filesystem::path const & data_path, nano::node_fl
 		}
 
 		boost::asio::io_context io_ctx;
-		auto opencl (nano::opencl_work::create (config.opencl_enable, config.opencl, logger, config.node.network_params.work));
+		auto opencl (nano::opencl_work::create (config.opencl_enable, config.opencl, nlogger, config.node.network_params.work));
 		nano::work_pool opencl_work (config.node.network_params.network, config.node.work_threads, config.node.pow_sleep_interval, opencl ? [&opencl] (nano::work_version const version_a, nano::root const & root_a, uint64_t difficulty_a, std::atomic<int> & ticket_a) {
 			return opencl->generate_work (version_a, root_a, difficulty_a, ticket_a);
 		}
@@ -133,7 +133,7 @@ void nano::daemon::run (boost::filesystem::path const & data_path, nano::node_fl
 
 				nlogger.info (nano::log::tag::daemon, "Network: {}", network_label);
 				nlogger.info (nano::log::tag::daemon, "Version: {}", NANO_VERSION_STRING);
-				nlogger.info (nano::log::tag::daemon, "Path: '{}'", node->application_path.string ());
+				nlogger.info (nano::log::tag::daemon, "Data path: '{}'", node->application_path.string ());
 				nlogger.info (nano::log::tag::daemon, "Build info: {}", BUILD_INFO);
 				nlogger.info (nano::log::tag::daemon, "Database backend: {}", node->store.vendor_get ());
 				nlogger.info (nano::log::tag::daemon, "Start time: {:%c} UTC", fmt::gmtime (dateTime));

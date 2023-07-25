@@ -257,10 +257,6 @@ void nano::network::broadcast_confirm_req (std::shared_ptr<nano::block> const & 
 void nano::network::broadcast_confirm_req_base (std::shared_ptr<nano::block> const & block_a, std::shared_ptr<std::vector<std::shared_ptr<nano::transport::channel>>> const & endpoints_a, unsigned delay_a, bool resumption)
 {
 	std::size_t const max_reps = 10;
-	if (!resumption && node.config.logging.network_logging ())
-	{
-		node.logger.try_log (boost::str (boost::format ("Broadcasting confirm req for block %1% to %2% representatives") % block_a->hash ().to_string () % endpoints_a->size ()));
-	}
 	auto count (0);
 	while (!endpoints_a->empty () && count < max_reps)
 	{
@@ -285,11 +281,6 @@ void nano::network::broadcast_confirm_req_base (std::shared_ptr<nano::block> con
 
 void nano::network::broadcast_confirm_req_batched_many (std::unordered_map<std::shared_ptr<nano::transport::channel>, std::deque<std::pair<nano::block_hash, nano::root>>> request_bundle_a, std::function<void ()> callback_a, unsigned delay_a, bool resumption_a)
 {
-	if (!resumption_a && node.config.logging.network_logging ())
-	{
-		node.logger.try_log (boost::str (boost::format ("Broadcasting batch confirm req to %1% representatives") % request_bundle_a.size ()));
-	}
-
 	for (auto i (request_bundle_a.begin ()), n (request_bundle_a.end ()); i != n;)
 	{
 		std::vector<std::pair<nano::block_hash, nano::root>> roots_hashes_l;
