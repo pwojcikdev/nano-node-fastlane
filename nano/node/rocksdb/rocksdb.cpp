@@ -60,7 +60,7 @@ void rocksdb_val::convert_buffer_to_value ()
 }
 }
 
-nano::rocksdb::store::store (nano::logger_mt & logger_a, boost::filesystem::path const & path_a, nano::ledger_constants & constants, nano::rocksdb_config const & rocksdb_config_a, bool open_read_only_a) :
+nano::rocksdb::store::store (nano::nlogger & nlogger_a, boost::filesystem::path const & path_a, nano::ledger_constants & constants, nano::rocksdb_config const & rocksdb_config_a, bool open_read_only_a) :
 	// clang-format off
 	nano::store{
 		block_store,
@@ -85,7 +85,7 @@ nano::rocksdb::store::store (nano::logger_mt & logger_a, boost::filesystem::path
 	confirmation_height_store{ *this },
 	final_vote_store{ *this },
 	version_store{ *this },
-	logger{ logger_a },
+	nlogger{ nlogger_a },
 	constants{ constants },
 	rocksdb_config{ rocksdb_config_a },
 	max_block_write_batch_num_m{ nano::narrow_cast<unsigned> (blocks_memtable_size_bytes () / (2 * (sizeof (nano::block_type) + nano::state_block::size + nano::block_sideband::size (nano::block_type::state)))) },
@@ -121,14 +121,16 @@ nano::rocksdb::store::store (nano::logger_mt & logger_a, boost::filesystem::path
 		auto version_l = version.get (transaction);
 		if (version_l > version_current)
 		{
+			nlogger.critical (nano::log::tag::rocksdb, "The version of the ledger ({}) is too high for this node", version_l);
+
 			error = true;
-			logger.always_log (boost::str (boost::format ("The version of the ledger (%1%) is too high for this node") % version_l));
 			return;
 		}
 		else if (version_l < version_minimum)
 		{
+			nlogger.critical (nano::log::tag::rocksdb, "The version of the ledger ({}) is lower than the minimum ({}) which is supported for upgrades. Either upgrade a node first or delete the ledger.", version_l, version_minimum);
+
 			error = true;
-			logger.always_log (boost::str (boost::format ("The version of the ledger (%1%) is lower than the minimum (%2%) which is supported for upgrades. Either upgrade to a v19, v20 or v21 node first or delete the ledger.") % version_l % version_minimum));
 			return;
 		}
 		is_fully_upgraded = (version_l == version_current);
@@ -175,7 +177,8 @@ nano::rocksdb::store::store (nano::logger_mt & logger_a, boost::filesystem::path
 	open (error, path_a, open_read_only_a, options, get_current_column_families (path_a.string (), options));
 	if (!error)
 	{
-		logger.always_log ("Upgrade in progress...");
+		nlogger.info (nano::log::tag::rocksdb, "Upgrade in progress...");
+
 		auto transaction = tx_begin_write ();
 		error |= do_upgrades (transaction);
 	}
@@ -266,7 +269,7 @@ bool nano::rocksdb::store::do_upgrades (nano::write_transaction const & transact
 		case 22:
 			break;
 		default:
-			logger.always_log (boost::str (boost::format ("The version of the ledger (%1%) is too high for this node") % version_l));
+			nlogger.critical (nano::log::tag::rocksdb, "The version of the ledger ({}) is too high for this node", version_l);
 			error_l = true;
 			break;
 	}
@@ -275,7 +278,8 @@ bool nano::rocksdb::store::do_upgrades (nano::write_transaction const & transact
 
 void nano::rocksdb::store::upgrade_v21_to_v22 (nano::write_transaction const & transaction_a)
 {
-	logger.always_log ("Preparing v21 to v22 database upgrade...");
+	nlogger.info (nano::log::tag::rocksdb, "Upgrading database from v21 to v22...");
+
 	if (column_family_exists ("unchecked"))
 	{
 		auto const unchecked_handle = get_column_family ("unchecked");
@@ -290,9 +294,12 @@ void nano::rocksdb::store::upgrade_v21_to_v22 (nano::write_transaction const & t
 			}
 			return false;
 		});
+		nlogger.debug (nano::log::tag::rocksdb, "Finished removing unchecked table");
 	}
+	
 	version.put (transaction_a, 22);
-	logger.always_log ("Finished removing unchecked table");
+
+	nlogger.info (nano::log::tag::rocksdb, "Upgrading database from v21 to v22 completed");
 }
 
 void nano::rocksdb::store::generate_tombstone_map ()
@@ -935,7 +942,7 @@ bool nano::rocksdb::store::copy_db (boost::filesystem::path const & destination_
 	// Open it so that it flushes all WAL files
 	if (status.ok ())
 	{
-		nano::rocksdb::store rocksdb_store{ logger, destination_path.string (), constants, rocksdb_config, false };
+		nano::rocksdb::store rocksdb_store{ nlogger, destination_path.string (), constants, rocksdb_config, false };
 		return !rocksdb_store.init_error ();
 	}
 	return false;
