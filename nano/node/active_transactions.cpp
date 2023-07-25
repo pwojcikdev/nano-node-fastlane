@@ -258,11 +258,6 @@ void nano::active_transactions::request_confirm (nano::unique_lock<nano::mutex> 
 
 	solicitor.flush ();
 	lock_a.lock ();
-
-	if (node.config.logging.timing_logging ())
-	{
-		node.logger.try_log (boost::str (boost::format ("Processed %1% elections (%2% were already confirmed) in %3% %4%") % this_loop_target_l % (this_loop_target_l - unconfirmed_count_l) % elapsed.value ().count () % elapsed.unit ()));
-	}
 }
 
 void nano::active_transactions::cleanup_election (nano::unique_lock<nano::mutex> & lock_a, std::shared_ptr<nano::election> election)

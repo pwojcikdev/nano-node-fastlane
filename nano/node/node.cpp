@@ -189,7 +189,7 @@ nano::node::node (boost::asio::io_context & io_ctx_a, boost::filesystem::path co
 	online_reps (ledger, config),
 	history{ config.network_params.voting },
 	vote_uniquer (block_uniquer),
-	confirmation_height_processor (ledger, write_database_queue, config.conf_height_processor_batch_min_time, config.logging, logger, node_initialized_latch, flags.confirmation_height_processor_mode),
+	confirmation_height_processor (ledger, write_database_queue, config.conf_height_processor_batch_min_time, nlogger, node_initialized_latch, flags.confirmation_height_processor_mode),
 	inactive_vote_cache{ nano::nodeconfig_to_vote_cache_config (config, flags) },
 	generator{ config, ledger, wallets, vote_processor, history, network, stats, /* non-final */ false },
 	final_generator{ config, ledger, wallets, vote_processor, history, network, stats, /* final */ true },
@@ -1359,7 +1359,7 @@ void nano::node::process_confirmed (nano::election_status const & status_a, uint
 	decltype (iteration_a) const num_iters = (config.block_processor_batch_max_time / network_params.node.process_confirmed_interval) * 4;
 	if (auto block_l = ledger.store.block.get (ledger.store.tx_begin_read (), hash))
 	{
-		nlogger.trace (nano::log::tag::node, nano::log::detail::process_confirmed, nlogger::entry{ "block", block_l });
+		nlogger.trace (nano::log::tag::node, nano::log::detail::process_confirmed, nano::nlogger::arg{ "block", block_l });
 
 		active.recently_confirmed.put (block_l->qualified_root (), hash);
 		confirmation_height_processor.add (block_l);
