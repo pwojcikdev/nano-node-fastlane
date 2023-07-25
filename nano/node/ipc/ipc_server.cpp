@@ -624,7 +624,7 @@ nano::ipc::ipc_server::ipc_server (nano::node & node_a, nano::node_rpc_config co
 			transports.push_back (std::make_shared<tcp_socket_transport> (*this, boost::asio::ip::tcp::endpoint (boost::asio::ip::tcp::v6 (), node_a.config.ipc_config.transport_tcp.port), node_a.config.ipc_config.transport_tcp, threads));
 		}
 
-		node.nlogger.info (nano::log::tag::ipc_server, "Server started");
+		node.nlogger.debug (nano::log::tag::ipc_server, "Server started");
 
 		if (!transports.empty ())
 		{
@@ -639,7 +639,7 @@ nano::ipc::ipc_server::ipc_server (nano::node & node_a, nano::node_rpc_config co
 
 nano::ipc::ipc_server::~ipc_server ()
 {
-	node.nlogger.info (nano::log::tag::ipc_server, "Server stopped");
+	node.nlogger.debug (nano::log::tag::ipc_server, "Server stopped");
 }
 
 void nano::ipc::ipc_server::stop ()

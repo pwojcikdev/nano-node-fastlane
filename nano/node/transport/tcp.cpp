@@ -562,7 +562,7 @@ void nano::transport::tcp_channels::start_tcp (nano::endpoint const & endpoint_a
 				auto query = node_l->network.prepare_handshake_query (endpoint_a);
 				nano::node_id_handshake message{ node_l->network_params.network, query };
 
-				node_l->nlogger.debug (nano::log::tag::tcp, "Node ID handshake sent to: {} (query: {})",
+				node_l->nlogger.debug (nano::log::tag::tcp, "Handshake sent to: {} (query: {})",
 				nano::util::to_str (endpoint_a),
 				(query ? query->cookie.to_string () : "<none>"));
 
@@ -578,13 +578,11 @@ void nano::transport::tcp_channels::start_tcp (nano::endpoint const & endpoint_a
 						}
 						else
 						{
+							node_l->nlogger.debug (nano::log::tag::tcp, "Error sending handshake to: {} ({})", nano::util::to_str (endpoint_a), ec.message ());
+
 							if (auto socket_l = channel->socket.lock ())
 							{
 								socket_l->close ();
-							}
-							if (node_l->config.logging.network_node_id_handshake_logging ())
-							{
-								node_l->logger.try_log (boost::str (boost::format ("Error sending node_id_handshake to %1%: %2%") % endpoint_a % ec.message ()));
 							}
 						}
 					}
@@ -592,16 +590,13 @@ void nano::transport::tcp_channels::start_tcp (nano::endpoint const & endpoint_a
 			}
 			else
 			{
-				if (node_l->config.logging.network_logging ())
+				if (ec)
 				{
-					if (ec)
-					{
-						node_l->logger.try_log (boost::str (boost::format ("Error connecting to %1%: %2%") % endpoint_a % ec.message ()));
-					}
-					else
-					{
-						node_l->logger.try_log (boost::str (boost::format ("Error connecting to %1%") % endpoint_a));
-					}
+					node_l->nlogger.debug (nano::log::tag::tcp, "Error connecting to: {} ({})", nano::util::to_str (endpoint_a), ec.message ());
+				}
+				else
+				{
+					node_l->nlogger.debug (nano::log::tag::tcp, "Error connecting to: {}", nano::util::to_str (endpoint_a));
 				}
 			}
 		}
@@ -639,10 +634,8 @@ void nano::transport::tcp_channels::start_tcp_receive_node_id (std::shared_ptr<n
 		}
 		if (ec || !channel_a)
 		{
-			if (node_l->config.logging.network_node_id_handshake_logging ())
-			{
-				node_l->logger.try_log (boost::str (boost::format ("Error reading node_id_handshake from %1%: %2%") % endpoint_a % ec.message ()));
-			}
+			node_l->nlogger.debug (nano::log::tag::tcp, "Error reading handshake from: {} ({})", nano::util::to_str (endpoint_a), ec.message ());
+
 			cleanup_node_id_handshake_socket (endpoint_a);
 			return;
 		}
@@ -652,10 +645,8 @@ void nano::transport::tcp_channels::start_tcp_receive_node_id (std::shared_ptr<n
 		// the header type should in principle be checked after checking the network bytes and the version numbers, I will not change it here since the benefits do not outweight the difficulties
 		if (error || message->type () != nano::message_type::node_id_handshake)
 		{
-			if (node_l->config.logging.network_node_id_handshake_logging ())
-			{
-				node_l->logger.try_log (boost::str (boost::format ("Error reading node_id_handshake message header from %1%") % endpoint_a));
-			}
+			node_l->nlogger.debug (nano::log::tag::tcp, "Error reading handshake header from: {} ({})", nano::util::to_str (endpoint_a), ec.message ());
+
 			cleanup_node_id_handshake_socket (endpoint_a);
 			return;
 		}
@@ -684,10 +675,8 @@ void nano::transport::tcp_channels::start_tcp_receive_node_id (std::shared_ptr<n
 
 		if (error || !handshake.response || !handshake.query)
 		{
-			if (node_l->config.logging.network_node_id_handshake_logging ())
-			{
-				node_l->logger.try_log (boost::str (boost::format ("Error reading node_id_handshake from %1%") % endpoint_a));
-			}
+			node_l->nlogger.debug (nano::log::tag::tcp, "Error reading handshake payload from: {} ({})", nano::util::to_str (endpoint_a), ec.message ());
+
 			cleanup_node_id_handshake_socket (endpoint_a);
 			return;
 		}
@@ -720,10 +709,9 @@ void nano::transport::tcp_channels::start_tcp_receive_node_id (std::shared_ptr<n
 		auto response = node_l->network.prepare_handshake_response (*handshake.query, handshake.is_v2 ());
 		nano::node_id_handshake handshake_response (node_l->network_params.network, std::nullopt, response);
 
-		if (node_l->config.logging.network_node_id_handshake_logging ())
-		{
-			node_l->logger.try_log (boost::str (boost::format ("Node ID handshake response sent with node ID %1% to %2%: query %3%") % node_l->node_id.pub.to_node_id () % endpoint_a % handshake.query->cookie.to_string ()));
-		}
+		node_l->nlogger.debug (nano::log::tag::tcp, "Handshake response sent to {} (query: {})",
+		nano::util::to_str (endpoint_a),
+		handshake.query->cookie.to_string ());
 
 		channel_a->send (handshake_response, [node_w, channel_a, endpoint_a, cleanup_node_id_handshake_socket] (boost::system::error_code const & ec, std::size_t size_a) {
 			auto node_l = node_w.lock ();
@@ -733,10 +721,8 @@ void nano::transport::tcp_channels::start_tcp_receive_node_id (std::shared_ptr<n
 			}
 			if (ec || !channel_a)
 			{
-				if (node_l->config.logging.network_node_id_handshake_logging ())
-				{
-					node_l->logger.try_log (boost::str (boost::format ("Error sending node_id_handshake to %1%: %2%") % endpoint_a % ec.message ()));
-				}
+				node_l->nlogger.debug (nano::log::tag::tcp, "Error sending handshake response to: {} ({})", nano::util::to_str (endpoint_a), ec.message ());
+
 				cleanup_node_id_handshake_socket (endpoint_a);
 				return;
 			}

@@ -86,7 +86,7 @@ void nano::bulk_pull_client::request ()
 
 	if (attempt->should_log ())
 	{
-		node->nlogger.info (nano::log::tag::bulk_pull_client, "Accounts in pull queue: {}", attempt->pulling.load ());
+		node->nlogger.debug (nano::log::tag::bulk_pull_client, "Accounts in pull queue: {}", attempt->pulling.load ());
 	}
 
 	auto this_l (shared_from_this ());
@@ -244,7 +244,7 @@ void nano::bulk_pull_account_client::request ()
 
 	if (attempt->should_log ())
 	{
-		node->nlogger.info (nano::log::tag::bulk_pull_account_client, "Accounts in pull queue: {}", attempt->wallet_size ());
+		node->nlogger.debug (nano::log::tag::bulk_pull_account_client, "Accounts in pull queue: {}", attempt->wallet_size ());
 	}
 
 	auto this_l (shared_from_this ());

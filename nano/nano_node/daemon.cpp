@@ -111,10 +111,10 @@ void nano::daemon::run (boost::filesystem::path const & data_path, nano::node_fl
 
 			nano::set_file_descriptor_limit (OPEN_FILE_DESCRIPTORS_LIMIT);
 			auto const file_descriptor_limit = nano::get_file_descriptor_limit ();
-			nlogger.info (nano::log::tag::daemon, "Open file descriptors limit: {}", file_descriptor_limit);
+			nlogger.info (nano::log::tag::daemon, "File descriptors limit: {}", file_descriptor_limit);
 			if (file_descriptor_limit < OPEN_FILE_DESCRIPTORS_LIMIT)
 			{
-				nlogger.warn (nano::log::tag::daemon, "Open file descriptors limit is lower than the {} recommended. Node was unable to change it.", OPEN_FILE_DESCRIPTORS_LIMIT);
+				nlogger.warn (nano::log::tag::daemon, "File descriptors limit is lower than the {} recommended. Node was unable to change it.", OPEN_FILE_DESCRIPTORS_LIMIT);
 			}
 
 			// for the daemon start up, if the user hasn't specified a port in

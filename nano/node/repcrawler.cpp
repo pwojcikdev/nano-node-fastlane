@@ -53,7 +53,7 @@ void nano::rep_crawler::validate ()
 		nano::uint128_t rep_weight = node.ledger.weight (vote->account);
 		if (rep_weight < minimum)
 		{
-			node.nlogger.debug (nano::log::tag::repcrawler, "Ignoring vote from account {} with too little voting weight {}",
+			node.nlogger.debug (nano::log::tag::repcrawler, "Ignoring vote from account {} with too little voting weight: {}",
 			vote->account.to_account (),
 			nano::util::to_str (rep_weight));
 

@@ -127,7 +127,7 @@ void nano::port_mapping::refresh_mapping ()
 			{
 				protocol.external_port = 0;
 
-				node.nlogger.error (nano::log::tag::upnp, "UPnP {} {}:{} failed: {} ({})",
+				node.nlogger.warn (nano::log::tag::upnp, "UPnP {} {}:{} failed: {} ({})",
 				protocol.name,
 				protocol.external_address.to_string (),
 				config_port_l,
@@ -161,7 +161,7 @@ bool nano::port_mapping::check_lost_or_old_mapping ()
 		{
 			result_l = true;
 
-			node.nlogger.error (nano::log::tag::upnp, "UPnP get specific port mapping failed: {} ({})",
+			node.nlogger.warn (nano::log::tag::upnp, "UPnP get specific port mapping failed: {} ({})",
 			verify_port_mapping_error_l,
 			strupnperror (verify_port_mapping_error_l));
 		}
@@ -187,7 +187,7 @@ bool nano::port_mapping::check_lost_or_old_mapping ()
 		{
 			protocol.external_address = boost::asio::ip::address_v4::any ();
 
-			node.nlogger.error (nano::log::tag::upnp, "UPnP get external ip address failed: {} ({})",
+			node.nlogger.warn (nano::log::tag::upnp, "UPnP get external ip address failed: {} ({})",
 			external_ip_error_l,
 			strupnperror (external_ip_error_l));
 		}
@@ -249,7 +249,7 @@ void nano::port_mapping::stop ()
 			auto delete_error_l (UPNP_DeletePortMapping (upnp.urls.controlURL, upnp.data.first.servicetype, std::to_string (protocol.external_port).c_str (), protocol.name, address.to_string ().c_str ()));
 			if (delete_error_l)
 			{
-				node.nlogger.error (nano::log::tag::upnp, "UPnP shutdown {} port mapping failed: {} ({})",
+				node.nlogger.warn (nano::log::tag::upnp, "UPnP shutdown {} port mapping failed: {} ({})",
 				protocol.name,
 				delete_error_l,
 				strupnperror (delete_error_l));
