@@ -181,7 +181,9 @@ void nano::daemon::run (boost::filesystem::path const & data_path, nano::node_fl
 				}
 
 				debug_assert (!nano::signal_handler_impl);
-				nano::signal_handler_impl = [&io_ctx] () {
+				nano::signal_handler_impl = [this, &io_ctx] () {
+					nlogger.warn (nano::log::tag::daemon, "Interrupt signal received, stopping...");
+
 					io_ctx.stop ();
 					sig_int_or_term = 1;
 				};

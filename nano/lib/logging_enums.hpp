@@ -32,6 +32,7 @@ enum class tag
 	ipc_server,
 	websocket,
 	active_transactions,
+	election,
 	blockprocessor,
 	network,
 	channel,
@@ -76,6 +77,10 @@ enum class detail
 	// active_transactions
 	active_started,
 	active_stopped,
+
+	// election
+	election_confirmed,
+	election_expired,
 
 	// blockprocessor
 	block_processed,

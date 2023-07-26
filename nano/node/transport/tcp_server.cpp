@@ -254,10 +254,13 @@ void nano::transport::tcp_server::received_message (std::unique_ptr<nano::messag
 		{
 			node->stats.inc (nano::stat::type::filter, nano::stat::detail::duplicate_publish);
 		}
-
-		node->nlogger.debug (nano::log::tag::tcp, "Error deserializing message: {} ({})",
-		nano::to_string (message_deserializer->status),
-		nano::util::to_str (remote_endpoint));
+		else
+		{
+			// Avoid too much noise about `duplicate_publish_message` errors
+			node->nlogger.debug (nano::log::tag::tcp, "Error deserializing message: {} ({})",
+			nano::to_string (message_deserializer->status),
+			nano::util::to_str (remote_endpoint));
+		}
 	}
 
 	if (should_continue)

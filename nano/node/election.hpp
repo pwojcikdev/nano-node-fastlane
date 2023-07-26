@@ -64,6 +64,9 @@ enum class election_behavior
 
 nano::stat::detail to_stat_detail (nano::election_behavior);
 
+// map of vote weight per block, ordered greater first
+using tally_t = std::map<nano::uint128_t, std::shared_ptr<nano::block>, std::greater<nano::uint128_t>>;
+
 struct election_extended_status final
 {
 	nano::election_status status;
@@ -123,7 +126,6 @@ public: // Status
 	std::shared_ptr<nano::block> winner () const;
 	std::atomic<unsigned> confirmation_request_count{ 0 };
 
-	void log_votes (nano::tally_t const &, std::string const & = "") const;
 	nano::tally_t tally () const;
 	bool have_quorum (nano::tally_t const &) const;
 
