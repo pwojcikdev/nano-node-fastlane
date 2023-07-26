@@ -23,7 +23,7 @@ void nano::transport::channel::send (nano::message & message_a, std::function<vo
 	if (!is_droppable_by_limiter || should_pass)
 	{
 		node.stats.inc (nano::stat::type::message, detail, nano::stat::dir::out);
-		node.nlogger.trace (nano::log::tag::network, nano::log::detail::message_sent,
+		node.nlogger.trace (nano::log::tag::channel, nano::log::detail::message_sent,
 		nano::nlogger::arg{ "message", message_a },
 		nano::nlogger::arg{ "channel", *this });
 
@@ -31,17 +31,17 @@ void nano::transport::channel::send (nano::message & message_a, std::function<vo
 	}
 	else
 	{
+		node.stats.inc (nano::stat::type::drop, detail, nano::stat::dir::out);
+		node.nlogger.trace (nano::log::tag::channel, nano::log::detail::message_dropped,
+		nano::nlogger::arg{ "message", message_a },
+		nano::nlogger::arg{ "channel", *this });
+
 		if (callback_a)
 		{
 			node.background ([callback_a] () {
 				callback_a (boost::system::errc::make_error_code (boost::system::errc::not_supported), 0);
 			});
 		}
-
-		node.stats.inc (nano::stat::type::drop, detail, nano::stat::dir::out);
-		node.nlogger.trace (nano::log::tag::network, nano::log::detail::message_dropped,
-		nano::nlogger::arg{ "message", message_a },
-		nano::nlogger::arg{ "channel", *this });
 	}
 }
 

@@ -34,6 +34,7 @@ enum class tag
 	active_transactions,
 	blockprocessor,
 	network,
+	channel,
 	tcp,
 	prunning,
 	conf_processor_bounded,
