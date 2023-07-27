@@ -243,7 +243,6 @@ bool nano::websocket::vote_options::should_filter (nano::websocket::message cons
 nano::websocket::session::session (nano::websocket::listener & listener_a, socket_type socket_a, boost::asio::ssl::context & ctx_a) :
 	ws_listener (listener_a), ws (std::move (socket_a), ctx_a)
 {
-	ws_listener.get_logger ().try_log ("Websocket: secure session started");
 }
 
 #endif

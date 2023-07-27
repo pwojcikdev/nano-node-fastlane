@@ -22,6 +22,8 @@ enum class type : uint8_t
 	peering,
 	ipc,
 	tcp,
+	channel,
+	socket,
 	confirmation_height,
 	confirmation_observer,
 	drop,

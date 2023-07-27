@@ -626,7 +626,7 @@ void nano::transport::tcp_server::timeout ()
 	}
 	if (socket->has_timed_out ())
 	{
-		node->nlogger.debug (nano::log::tag::tcp_server, "Closing TCP server by timeout ({})", nano::util::to_str (remote_endpoint));
+		node->nlogger.debug (nano::log::tag::tcp_server, "Closing TCP server due to timeout ({})", nano::util::to_str (remote_endpoint));
 
 		{
 			nano::lock_guard<nano::mutex> lock{ node->tcp_listener.mutex };

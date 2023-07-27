@@ -24,6 +24,7 @@ enum class tag
 	node,
 	daemon,
 	wallet,
+	qt,
 	rpc,
 	rpc_connection,
 	rpc_callbacks,
@@ -52,6 +53,7 @@ enum class tag
 	rocksdb,
 	txn_tracker,
 	gap_cache,
+	vote_processor,
 	bulk_pull_client,
 	bulk_pull_server,
 	bulk_pull_account_client,
@@ -88,6 +90,9 @@ enum class detail
 
 	// blockprocessor
 	block_processed,
+
+	// vote_processor
+	vote_processed,
 
 	// network
 	message_received,

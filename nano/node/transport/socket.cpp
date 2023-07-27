@@ -261,23 +261,22 @@ void nano::transport::socket::ongoing_checkup ()
 			if (this_l->endpoint_type () == endpoint_type_t::server && (now - this_l->last_receive_time_or_init) > static_cast<uint64_t> (this_l->silent_connection_tolerance_time.count ()))
 			{
 				this_l->node.stats.inc (nano::stat::type::tcp, nano::stat::detail::tcp_silent_connection_drop, nano::stat::dir::in);
+
 				condition_to_disconnect = true;
 			}
 
 			// if there is no activity for timeout seconds then disconnect
 			if ((now - this_l->last_completion_time_or_init) > this_l->timeout)
 			{
-				this_l->node.stats.inc (nano::stat::type::tcp, nano::stat::detail::tcp_io_timeout_drop,
-				this_l->endpoint_type () == endpoint_type_t::server ? nano::stat::dir::in : nano::stat::dir::out);
+				this_l->node.stats.inc (nano::stat::type::tcp, nano::stat::detail::tcp_io_timeout_drop, this_l->endpoint_type () == endpoint_type_t::server ? nano::stat::dir::in : nano::stat::dir::out);
+
 				condition_to_disconnect = true;
 			}
 
 			if (condition_to_disconnect)
 			{
-				if (this_l->node.config.logging.network_timeout_logging ())
-				{
-					this_l->node.logger.try_log (boost::str (boost::format ("Disconnecting from %1% due to timeout") % this_l->remote));
-				}
+				this_l->node.nlogger.debug (nano::log::tag::tcp_server, "Closing socket due to timeout ({})", nano::util::to_str (this_l->remote));
+
 				this_l->timed_out = true;
 				this_l->close ();
 			}
@@ -350,8 +349,8 @@ void nano::transport::socket::close_internal ()
 
 	if (ec)
 	{
-		node.logger.try_log ("Failed to close socket gracefully: ", ec.message ());
-		node.stats.inc (nano::stat::type::bootstrap, nano::stat::detail::error_socket_close);
+		node.stats.inc (nano::stat::type::socket, nano::stat::detail::error_socket_close);
+		node.nlogger.error (nano::log::tag::socket, "Failed to close socket gracefully: {} ({})", ec.message (), nano::util::to_str (remote));
 	}
 }
 
