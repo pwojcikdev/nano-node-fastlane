@@ -37,7 +37,6 @@ spdlog::logger & nano::nlogger::get_logger (nano::log::tag tag)
 		std::unique_lock lock{ mutex };
 
 		auto [it2, inserted] = spd_loggers.emplace (tag, make_logger (tag));
-		debug_assert (inserted);
 		return *it2->second;
 	}
 }

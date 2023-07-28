@@ -160,6 +160,7 @@ protected:
 
 	/** The other end of the connection */
 	boost::asio::ip::tcp::endpoint remote;
+	boost::asio::ip::tcp::endpoint local;
 
 	/** number of seconds of inactivity that causes a socket timeout
 	 *  activity is any successful connect, send or receive event

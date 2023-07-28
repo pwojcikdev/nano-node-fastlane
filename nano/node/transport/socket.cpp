@@ -83,7 +83,12 @@ void nano::transport::socket::async_connect (nano::tcp_endpoint const & endpoint
 		{
 			this_l->set_last_completion ();
 		}
-		this_l->remote = endpoint_a;
+		{
+			// Best effort attempt to get local and remote endpoints
+			boost::system::error_code ec;
+			this_l->local = this_l->tcp_socket.local_endpoint (ec);
+			this_l->remote = this_l->tcp_socket.remote_endpoint (ec);
+		}
 		this_l->node.observers.socket_connected.notify (*this_l);
 		callback (ec);
 	}));
@@ -356,12 +361,14 @@ void nano::transport::socket::close_internal ()
 
 nano::tcp_endpoint nano::transport::socket::remote_endpoint () const
 {
+	// Using cached value to avoid calling tcp_socket.remote_endpoint() which may be invalid (throw) after closing the socket
 	return remote;
 }
 
 nano::tcp_endpoint nano::transport::socket::local_endpoint () const
 {
-	return tcp_socket.local_endpoint ();
+	// Using cached value to avoid calling tcp_socket.local_endpoint() which may be invalid (throw) after closing the socket
+	return local;
 }
 
 /*
