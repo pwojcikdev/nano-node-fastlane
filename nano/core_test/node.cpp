@@ -1,4 +1,5 @@
 #include <nano/lib/config.hpp>
+#include <nano/lib/logging.hpp>
 #include <nano/node/election.hpp>
 #include <nano/node/scheduler/buckets.hpp>
 #include <nano/node/scheduler/component.hpp>
@@ -3308,7 +3309,7 @@ TEST (node, dont_write_lock_node)
 	std::promise<void> write_lock_held_promise;
 	std::promise<void> finished_promise;
 	std::thread ([&path, &write_lock_held_promise, &finished_promise] () {
-		nano::logger_mt logger;
+		nano::nlogger logger;
 		auto store = nano::make_store (logger, path, nano::dev::constants, false, true);
 		{
 			nano::ledger_cache ledger_cache;
