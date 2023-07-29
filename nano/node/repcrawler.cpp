@@ -97,7 +97,7 @@ void nano::rep_crawler::validate ()
 		}
 		if (updated)
 		{
-			node.nlogger.info (nano::log::tag::repcrawler, "Updated representative {} at {} (was at: {})", vote->account.to_account (), channel->to_string (), prev_channel->to_string ());
+			node.nlogger.warn (nano::log::tag::repcrawler, "Updated representative {} at {} (was at: {})", vote->account.to_account (), channel->to_string (), prev_channel->to_string ());
 		}
 	}
 }

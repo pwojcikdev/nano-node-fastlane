@@ -413,21 +413,36 @@ nano::node::node (boost::asio::io_context & io_ctx_a, boost::filesystem::path co
 		if ((network_params.network.is_live_network () || network_params.network.is_beta_network ()) && !flags.inactive_node)
 		{
 			auto const bootstrap_weights = get_bootstrap_weights ();
+			ledger.bootstrap_weight_max_blocks = bootstrap_weights.first;
+
+			nlogger.info (nano::log::tag::node, "Initial bootstrap height: {}", ledger.bootstrap_weight_max_blocks);
+			nlogger.info (nano::log::tag::node, "Current ledger height:    {}", ledger.cache.block_count.load ());
+
 			// Use bootstrap weights if initial bootstrap is not completed
 			const bool use_bootstrap_weight = ledger.cache.block_count < bootstrap_weights.first;
 			if (use_bootstrap_weight)
 			{
-				nlogger.info (nano::log::tag::node, "************************************ Bootstrap weights ************************************");
+				nlogger.info (nano::log::tag::node, "Using predefined representative weights, since block count is less than bootstrap threshold");
+
 				ledger.bootstrap_weights = bootstrap_weights.second;
-				for (auto const & rep : ledger.bootstrap_weights)
+
+				nlogger.info (nano::log::tag::node, "************************************ Bootstrap weights ************************************");
+
+				// Sort the weights
+				std::vector<std::pair<nano::account, nano::uint128_t>> sorted_weights (ledger.bootstrap_weights.begin (), ledger.bootstrap_weights.end ());
+				std::sort (sorted_weights.begin (), sorted_weights.end (), [] (auto const & entry1, auto const & entry2) {
+					return entry1.second > entry2.second;
+				});
+
+				for (auto const & rep : sorted_weights)
 				{
-					nlogger.info (nano::log::tag::node, "Using bootstrap rep weight: {} -> {}", rep.first.to_account (), nano::uint128_union (rep.second).format_balance (Mxrb_ratio, 0, true));
+					nlogger.info (nano::log::tag::node, "Using bootstrap rep weight: {} -> {}",
+					rep.first.to_account (),
+					nano::uint128_union (rep.second).format_balance (Mxrb_ratio, 0, true));
 				}
+
 				nlogger.info (nano::log::tag::node, "************************************ ================= ************************************");
 			}
-			ledger.bootstrap_weight_max_blocks = bootstrap_weights.first;
-			nlogger.info (nano::log::tag::node, "Initial bootstrap height: {}", ledger.bootstrap_weight_max_blocks);
-			nlogger.info (nano::log::tag::node, "Current ledger height:    {}", ledger.cache.block_count.load ());
 
 			// Drop unchecked blocks if initial bootstrap is completed
 			if (!flags.disable_unchecked_drop && !use_bootstrap_weight && !flags.read_only)
