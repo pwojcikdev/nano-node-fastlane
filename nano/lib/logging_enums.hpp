@@ -64,6 +64,7 @@ enum class tag
 	frontier_req_server,
 	bootstrap,
 	bootstrap_lazy,
+	bootstrap_legacy,
 };
 
 enum class category
