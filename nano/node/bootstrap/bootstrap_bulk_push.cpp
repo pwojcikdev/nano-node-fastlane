@@ -162,7 +162,7 @@ void nano::bulk_push_server::receive ()
 	}
 	if (node->bootstrap_initiator.in_progress ())
 	{
-		node->nlogger.info (nano::log::tag::bulk_push_server, "Aborting bulk_push because a bootstrap attempt is in progress");
+		node->nlogger.debug (nano::log::tag::bulk_push_server, "Aborting bulk push because a bootstrap attempt is in progress");
 	}
 	else
 	{
