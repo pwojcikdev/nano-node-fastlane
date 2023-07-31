@@ -46,7 +46,7 @@ void nano::rpc::start ()
 	acceptor.bind (endpoint, ec);
 	if (ec)
 	{
-		nlogger.critical (nano::log::tag::rpc, "Error while binding for RPC on port: {} [{}]", endpoint.port (), ec.message ());
+		nlogger.critical (nano::log::tag::rpc, "Error while binding for RPC on port: {} ({})", endpoint.port (), ec.message ());
 		throw std::runtime_error (ec.message ());
 	}
 	acceptor.listen ();

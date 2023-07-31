@@ -94,7 +94,7 @@ void nano::distributed_work::start ()
 				}
 				else
 				{
-					this_l->node.nlogger.error (nano::log::tag::distributed_work, "Error resolving work peer: {}:{} [{}]", peer.first, peer.second, ec.message ());
+					this_l->node.nlogger.error (nano::log::tag::distributed_work, "Error resolving work peer: {}:{} ({})", peer.first, peer.second, ec.message ());
 
 					this_l->failure ();
 				}
@@ -167,7 +167,7 @@ void nano::distributed_work::do_request (nano::tcp_endpoint const & endpoint_a)
 							}
 							else if (ec)
 							{
-								this_l->node.nlogger.error (nano::log::tag::distributed_work, "Work peer responded with an error {}:{} [{}]",
+								this_l->node.nlogger.error (nano::log::tag::distributed_work, "Work peer responded with an error {}:{} ({})",
 								nano::util::to_str (connection->endpoint.address ()),
 								connection->endpoint.port (),
 								ec.message ());
@@ -185,7 +185,7 @@ void nano::distributed_work::do_request (nano::tcp_endpoint const & endpoint_a)
 				}
 				else if (ec && ec != boost::system::errc::operation_canceled)
 				{
-					this_l->node.nlogger.error (nano::log::tag::distributed_work, "Unable to write to work peer {}:{} [{}]",
+					this_l->node.nlogger.error (nano::log::tag::distributed_work, "Unable to write to work peer {}:{} ({})",
 					nano::util::to_str (connection->endpoint.address ()),
 					connection->endpoint.port (),
 					ec.message ());
@@ -197,7 +197,7 @@ void nano::distributed_work::do_request (nano::tcp_endpoint const & endpoint_a)
 		}
 		else if (ec && ec != boost::system::errc::operation_canceled)
 		{
-			this_l->node.nlogger.error (nano::log::tag::distributed_work, "Unable to connect to work peer {}:{} [{}]",
+			this_l->node.nlogger.error (nano::log::tag::distributed_work, "Unable to connect to work peer {}:{} ({})",
 			nano::util::to_str (connection->endpoint.address ()),
 			connection->endpoint.port (),
 			ec.message ());
@@ -232,7 +232,7 @@ void nano::distributed_work::do_cancel (nano::tcp_endpoint const & endpoint_a)
 			[this_l, peer_cancel, cancelling_l] (boost::system::error_code const & ec, std::size_t bytes_transferred) {
 				if (ec && ec != boost::system::errc::operation_canceled)
 				{
-					this_l->node.nlogger.error (nano::log::tag::distributed_work, "Unable to send work cancel to work peer {}:{} [{}]",
+					this_l->node.nlogger.error (nano::log::tag::distributed_work, "Unable to send work cancel to work peer {}:{} ({})",
 					nano::util::to_str (cancelling_l->endpoint.address ()),
 					cancelling_l->endpoint.port (),
 					ec.message ());
@@ -317,7 +317,7 @@ void nano::distributed_work::stop_once (bool const local_stop_a)
 							connection_l->socket.close (ec);
 							if (ec)
 							{
-								this_l->node.nlogger.error (nano::log::tag::distributed_work, "Error closing socket with work peer: {}:{} [{}]",
+								this_l->node.nlogger.error (nano::log::tag::distributed_work, "Error closing socket with work peer: {}:{} ({})",
 								nano::util::to_str (connection_l->endpoint.address ()),
 								connection_l->endpoint.port (),
 								ec.message ());
@@ -325,7 +325,7 @@ void nano::distributed_work::stop_once (bool const local_stop_a)
 						}
 						else
 						{
-							this_l->node.nlogger.error (nano::log::tag::distributed_work, "Error cancelling operation with work peer: {}:{} [{}]",
+							this_l->node.nlogger.error (nano::log::tag::distributed_work, "Error cancelling operation with work peer: {}:{} ({})",
 							nano::util::to_str (connection_l->endpoint.address ()),
 							connection_l->endpoint.port (),
 							ec.message ());

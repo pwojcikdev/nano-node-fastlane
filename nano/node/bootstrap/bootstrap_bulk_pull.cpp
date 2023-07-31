@@ -103,7 +103,7 @@ void nano::bulk_pull_client::request ()
 		}
 		else
 		{
-			node->nlogger.debug (nano::log::tag::bulk_pull_client, "Error sending bulk pull request to: {} [{}]", this_l->connection->channel->to_string (), ec.message ());
+			node->nlogger.debug (nano::log::tag::bulk_pull_client, "Error sending bulk pull request to: {} ({})", this_l->connection->channel->to_string (), ec.message ());
 			node->stats.inc (nano::stat::type::bootstrap, nano::stat::detail::bulk_pull_request_failure, nano::stat::dir::in);
 		}
 	},
@@ -261,7 +261,7 @@ void nano::bulk_pull_account_client::request ()
 		}
 		else
 		{
-			node->nlogger.debug (nano::log::tag::bulk_pull_account_client, "Error starting bulk pull request to: {} [{}]", this_l->connection->channel->to_string (), ec.message ());
+			node->nlogger.debug (nano::log::tag::bulk_pull_account_client, "Error starting bulk pull request to: {} ({})", this_l->connection->channel->to_string (), ec.message ());
 			node->stats.inc (nano::stat::type::bootstrap, nano::stat::detail::bulk_pull_error_starting_request, nano::stat::dir::in);
 
 			this_l->attempt->requeue_pending (this_l->account);

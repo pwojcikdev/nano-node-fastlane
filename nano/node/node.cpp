@@ -90,7 +90,7 @@ void nano::node::keepalive (std::string const & address_a, uint16_t port_a)
 		}
 		else
 		{
-			node_l->nlogger.error (nano::log::tag::node, "Error resolving address for keepalive: {}:{} [{}]", address_a, port_a, ec.message ());
+			node_l->nlogger.error (nano::log::tag::node, "Error resolving address for keepalive: {}:{} ({})", address_a, port_a, ec.message ());
 		}
 	});
 }
@@ -299,7 +299,7 @@ nano::node::node (boost::asio::io_context & io_ctx_a, boost::filesystem::path co
 							}
 							else
 							{
-								node_l->nlogger.error (nano::log::tag::rpc_callbacks, "Error resolving callback: {}:{} [{}]", address, port, ec.message ());
+								node_l->nlogger.error (nano::log::tag::rpc_callbacks, "Error resolving callback: {}:{} ({})", address, port, ec.message ());
 								node_l->stats.inc (nano::stat::type::error, nano::stat::detail::http_callback, nano::stat::dir::out);
 							}
 						});
@@ -357,7 +357,7 @@ nano::node::node (boost::asio::io_context & io_ctx_a, boost::filesystem::path co
 		auto const network_label = network_params.network.get_current_network_as_string ();
 		nlogger.info (nano::log::tag::node, "Active network: {}", network_label);
 
-		nlogger.info (nano::log::tag::node, "Work pool threads: {} [{}]", work.threads.size (), (work.opencl ? "OpenCL" : "CPU"));
+		nlogger.info (nano::log::tag::node, "Work pool threads: {} ({})", work.threads.size (), (work.opencl ? "OpenCL" : "CPU"));
 		nlogger.info (nano::log::tag::node, "Work peers: {}", config.work_peers.size ());
 
 		if (!work_generation_enabled ())
@@ -515,21 +515,21 @@ void nano::node::do_rpc_callback (boost::asio::ip::tcp::resolver::iterator i_a, 
 							}
 							else
 							{
-								node_l->nlogger.error (nano::log::tag::rpc_callbacks, "Unable to complete callback: {}:{} [{}]", address, port, ec.message ());
+								node_l->nlogger.error (nano::log::tag::rpc_callbacks, "Unable to complete callback: {}:{} ({})", address, port, ec.message ());
 								node_l->stats.inc (nano::stat::type::error, nano::stat::detail::http_callback, nano::stat::dir::out);
 							};
 						});
 					}
 					else
 					{
-						node_l->nlogger.error (nano::log::tag::rpc_callbacks, "Unable to send callback: {}:{} [{}]", address, port, ec.message ());
+						node_l->nlogger.error (nano::log::tag::rpc_callbacks, "Unable to send callback: {}:{} ({})", address, port, ec.message ());
 						node_l->stats.inc (nano::stat::type::error, nano::stat::detail::http_callback, nano::stat::dir::out);
 					}
 				});
 			}
 			else
 			{
-				node_l->nlogger.error (nano::log::tag::rpc_callbacks, "Unable to connect to callback address: {}:{} [{}]", address, port, ec.message ());
+				node_l->nlogger.error (nano::log::tag::rpc_callbacks, "Unable to connect to callback address: {}:{} ({})", address, port, ec.message ());
 				node_l->stats.inc (nano::stat::type::error, nano::stat::detail::http_callback, nano::stat::dir::out);
 				++i_a;
 

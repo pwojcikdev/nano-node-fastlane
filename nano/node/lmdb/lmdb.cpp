@@ -111,16 +111,16 @@ nano::lmdb::store::store (nano::nlogger & nlogger_a, boost::filesystem::path con
 
 			if (needs_vacuuming)
 			{
-				nlogger.info (nano::log::tag::lmdb, "Vaccum in progress...");
+				nlogger.info (nano::log::tag::lmdb, "Ledger vaccum in progress...");
 
 				auto vacuum_success = vacuum_after_upgrade (path_a, lmdb_config_a);
 				if (vacuum_success)
 				{
-					nlogger.info (nano::log::tag::lmdb, "Vacuum succeeded");
+					nlogger.info (nano::log::tag::lmdb, "Ledger vacuum completed");
 				}
 				else
 				{
-					nlogger.error (nano::log::tag::lmdb, "Vacuum failed");
+					nlogger.error (nano::log::tag::lmdb, "Ledger vaccum failed");
 					nlogger.error (nano::log::tag::lmdb, "(Optional) Please ensure enough disk space is available for a copy of the database and try to vacuum after shutting down the node");
 				}
 			}
