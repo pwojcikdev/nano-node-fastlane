@@ -252,7 +252,16 @@ nano::websocket::session::session (nano::websocket::listener & listener_a, socke
 	ws (std::move (socket_a)),
 	nlogger (nlogger_a)
 {
-	nlogger.info (nano::log::tag::websocket, "Session started ({})", nano::util::to_str (ws.get_socket ().remote_endpoint ()));
+	{
+		// Best effort attempt to get endpoint addresses
+		boost::system::error_code ec;
+		remote = ws.get_socket ().remote_endpoint (ec);
+		debug_assert (!ec);
+		local = ws.get_socket ().local_endpoint (ec);
+		debug_assert (!ec);
+	}
+
+	nlogger.info (nano::log::tag::websocket, "Session started ({})", nano::util::to_str (remote));
 }
 
 nano::websocket::session::~session ()
@@ -277,14 +286,14 @@ void nano::websocket::session::handshake ()
 		}
 		else
 		{
-			this_l->nlogger.error (nano::log::tag::websocket, "Handshake failed: {} ({})", ec.message (), nano::util::to_str (this_l->ws.get_socket ().remote_endpoint ()));
+			this_l->nlogger.error (nano::log::tag::websocket, "Handshake failed: {} ({})", ec.message (), nano::util::to_str (this_l->remote));
 		}
 	});
 }
 
 void nano::websocket::session::close ()
 {
-	nlogger.info (nano::log::tag::websocket, "Session closing ({})", nano::util::to_str (ws.get_socket ().remote_endpoint ()));
+	nlogger.info (nano::log::tag::websocket, "Session closing ({})", nano::util::to_str (remote));
 
 	auto this_l (shared_from_this ());
 	boost::asio::dispatch (ws.get_strand (),
@@ -360,12 +369,12 @@ void nano::websocket::session::read ()
 				}
 				catch (boost::property_tree::json_parser::json_parser_error const & ex)
 				{
-					this_l->nlogger.error (nano::log::tag::websocket, "JSON parsing failed: {} ({})", ex.what (), nano::util::to_str (this_l->ws.get_socket ().remote_endpoint ()));
+					this_l->nlogger.error (nano::log::tag::websocket, "JSON parsing failed: {} ({})", ex.what (), nano::util::to_str (this_l->remote));
 				}
 			}
 			else if (ec != boost::asio::error::eof)
 			{
-				this_l->nlogger.error (nano::log::tag::websocket, "Read failed: {} ({})", ec.message (), nano::util::to_str (this_l->ws.get_socket ().remote_endpoint ()));
+				this_l->nlogger.error (nano::log::tag::websocket, "Read failed: {} ({})", ec.message (), nano::util::to_str (this_l->remote));
 			}
 		});
 	});
@@ -500,13 +509,13 @@ void nano::websocket::session::handle_message (boost::property_tree::ptree const
 		auto existing (subscriptions.find (topic_l));
 		if (existing != subscriptions.end ())
 		{
-			nlogger.info (nano::log::tag::websocket, "Updated subscription to topic: {} ({})", from_topic (topic_l), nano::util::to_str (ws.get_socket ().remote_endpoint ()));
+			nlogger.info (nano::log::tag::websocket, "Updated subscription to topic: {} ({})", from_topic (topic_l), nano::util::to_str (remote));
 
 			existing->second = std::move (options_l);
 		}
 		else
 		{
-			nlogger.info (nano::log::tag::websocket, "New subscription to topic: {} ({})", from_topic (topic_l), nano::util::to_str (ws.get_socket ().remote_endpoint ()));
+			nlogger.info (nano::log::tag::websocket, "New subscription to topic: {} ({})", from_topic (topic_l), nano::util::to_str (remote));
 
 			subscriptions.emplace (topic_l, std::move (options_l));
 			ws_listener.increase_subscriber_count (topic_l);
@@ -531,7 +540,7 @@ void nano::websocket::session::handle_message (boost::property_tree::ptree const
 		nano::lock_guard<nano::mutex> lk (subscriptions_mutex);
 		if (subscriptions.erase (topic_l))
 		{
-			nlogger.info (nano::log::tag::websocket, "Removed subscription to topic: {} ({})", from_topic (topic_l), nano::util::to_str (ws.get_socket ().remote_endpoint ()));
+			nlogger.info (nano::log::tag::websocket, "Removed subscription to topic: {} ({})", from_topic (topic_l), nano::util::to_str (remote));
 
 			ws_listener.decrease_subscriber_count (topic_l);
 		}

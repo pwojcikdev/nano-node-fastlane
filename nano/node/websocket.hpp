@@ -263,10 +263,15 @@ namespace websocket
 		/** Websocket stream, supporting both plain and tls connections */
 		nano::websocket::stream ws;
 		nano::nlogger & nlogger;
+
 		/** Buffer for received messages */
 		boost::beast::multi_buffer read_buffer;
 		/** Outgoing messages. The send queue is protected by accessing it only through the strand */
 		std::deque<message> send_queue;
+
+		/** Cache remote & local endpoints to make them available after the socket is closed */
+		socket_type::endpoint_type remote;
+		socket_type::endpoint_type local;
 
 		/** Hash functor for topic enums */
 		struct topic_hash

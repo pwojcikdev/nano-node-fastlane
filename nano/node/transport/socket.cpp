@@ -82,14 +82,15 @@ void nano::transport::socket::async_connect (nano::tcp_endpoint const & endpoint
 		else
 		{
 			this_l->set_last_completion ();
+			{
+				// Best effort attempt to get endpoint addresses
+				boost::system::error_code ec;
+				this_l->remote = endpoint_a;
+				this_l->local = this_l->tcp_socket.local_endpoint (ec);
+				debug_assert (!ec);
+			}
+			this_l->node.observers.socket_connected.notify (*this_l);
 		}
-		{
-			// Best effort attempt to get local and remote endpoints
-			boost::system::error_code ec;
-			this_l->local = this_l->tcp_socket.local_endpoint (ec);
-			this_l->remote = this_l->tcp_socket.remote_endpoint (ec);
-		}
-		this_l->node.observers.socket_connected.notify (*this_l);
 		callback (ec);
 	}));
 }
@@ -608,6 +609,13 @@ void nano::transport::server_socket::on_connection (std::function<bool (std::sha
 
 			if (!ec_a)
 			{
+				{
+					// Best effort attempt to get endpoint addresses
+					boost::system::error_code ec;
+					new_connection->local = new_connection->tcp_socket.local_endpoint (ec);
+					debug_assert (!ec);
+				}
+
 				// Make sure the new connection doesn't idle. Note that in most cases, the callback is going to start
 				// an IO operation immediately, which will start a timer.
 				new_connection->start ();
