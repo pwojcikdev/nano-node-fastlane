@@ -296,7 +296,7 @@ void nano::rocksdb::store::upgrade_v21_to_v22 (nano::write_transaction const & t
 		});
 		nlogger.debug (nano::log::tag::rocksdb, "Finished removing unchecked table");
 	}
-	
+
 	version.put (transaction_a, 22);
 
 	nlogger.info (nano::log::tag::rocksdb, "Upgrading database from v21 to v22 completed");

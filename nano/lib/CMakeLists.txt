@@ -50,8 +50,8 @@ add_library(
   logger_mt.hpp
   logging.hpp
   logging.cpp
-        logging_enums.hpp
-        logging_enums.cpp
+  logging_enums.hpp
+  logging_enums.cpp
   memory.hpp
   memory.cpp
   numbers.hpp
@@ -110,7 +110,7 @@ target_link_libraries(
   ipc_flatbuffers_lib
   ${CRYPTOPP_LIBRARY}
   ${CMAKE_DL_LIBS}
-        fmt::fmt
+  fmt::fmt
   spdlog::spdlog
   Boost::asio
   Boost::circular_buffer

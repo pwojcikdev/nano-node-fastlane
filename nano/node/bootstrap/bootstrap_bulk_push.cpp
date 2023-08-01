@@ -118,7 +118,7 @@ void nano::bulk_push_client::push_block (nano::block const & block_a)
 		}
 		else
 		{
-			node->nlogger.debug(nano::log::tag::bulk_push_client, "Error sending block during bulk push: {}", ec.message ());
+			node->nlogger.debug (nano::log::tag::bulk_push_client, "Error sending block during bulk push: {}", ec.message ());
 		}
 	});
 }

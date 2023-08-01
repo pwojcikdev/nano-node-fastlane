@@ -44,14 +44,16 @@ class array_stream;
  */
 
 template <typename T>
-concept object_streamable = requires (T const & obj, object_stream & obs) {
+concept object_streamable = requires (T const & obj, object_stream & obs)
+{
 	{
 		obj (obs)
 	};
 };
 
 template <typename T>
-concept array_streamable = requires (T const & obj, array_stream & ars) {
+concept array_streamable = requires (T const & obj, array_stream & ars)
+{
 	{
 		obj (ars)
 	};
