@@ -689,7 +689,9 @@ void nano::election::operator() (nano::object_stream & obs) const
 
 	auto tally = tally_impl ();
 
-	obs.write ("tally", std::views::transform (tally, [] (auto const & entry) {
+	// Needed for std::views::transform on clang
+	std::vector<std::pair<nano::uint128_t, std::shared_ptr<nano::block>>> vec_tally (tally.begin (), tally.end ());
+	obs.write ("tally", std::views::transform (vec_tally, [] (auto const & entry) {
 		return [&entry] (nano::object_stream & obs) {
 			auto & [amount, block] = entry;
 			obs.write ("amount", amount);
