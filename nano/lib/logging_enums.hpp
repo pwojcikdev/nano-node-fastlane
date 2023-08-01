@@ -32,6 +32,7 @@ enum class tag
 	ipc,
 	ipc_server,
 	websocket,
+	tls,
 	active_transactions,
 	election,
 	blockprocessor,

@@ -68,6 +68,8 @@ nano::error read_wallet_config (nano::wallet_config & config_a, boost::filesyste
 
 int run_wallet (QApplication & application, int argc, char * const * argv, boost::filesystem::path const & data_path, nano::node_flags const & flags)
 {
+	nano::initialize_logging ();
+
 	int result (0);
 	nano_qt::eventloop_processor processor;
 	boost::system::error_code error_chmod;
@@ -97,13 +99,13 @@ int run_wallet (QApplication & application, int argc, char * const * argv, boost
 
 	if (!error)
 	{
+		nano::nlogger nlogger;
 		nano::set_use_memory_pools (config.node.use_memory_pools);
 
 		config.node.logging.init (data_path);
-		nano::logger_mt logger{ config.node.logging.min_time_between_log_output };
 
 		auto tls_config (std::make_shared<nano::tls_config> ());
-		error = nano::read_tls_config_toml (data_path, *tls_config, logger);
+		error = nano::read_tls_config_toml (data_path, *tls_config, nlogger);
 		if (error)
 		{
 			splash->hide ();
@@ -121,7 +123,7 @@ int run_wallet (QApplication & application, int argc, char * const * argv, boost
 		std::shared_ptr<nano::node> node;
 		std::shared_ptr<nano_qt::wallet> gui;
 		nano::set_application_icon (application);
-		auto opencl (nano::opencl_work::create (config.opencl_enable, config.opencl, logger, config.node.network_params.work));
+		auto opencl (nano::opencl_work::create (config.opencl_enable, config.opencl, nlogger, config.node.network_params.work));
 		nano::work_pool work{ config.node.network_params.network, config.node.work_threads, config.node.pow_sleep_interval, opencl ? [&opencl] (nano::work_version const version_a, nano::root const & root_a, uint64_t difficulty_a, std::atomic<int> &) {
 								 return opencl->generate_work (version_a, root_a, difficulty_a);
 							 }
