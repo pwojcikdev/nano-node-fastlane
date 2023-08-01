@@ -37,6 +37,11 @@ volatile sig_atomic_t sig_int_or_term = 0;
 
 void run (boost::filesystem::path const & data_path, std::vector<std::string> const & config_overrides)
 {
+	nano::initialize_logging ();
+
+	nano::nlogger nlogger;
+	nlogger.info (nano::log::tag::daemon, "RPC daemon started");
+
 	boost::filesystem::create_directories (data_path);
 	boost::system::error_code error_chmod;
 	nano::set_secure_perm_directory (data_path, error_chmod);
@@ -48,10 +53,9 @@ void run (boost::filesystem::path const & data_path, std::vector<std::string> co
 	if (!error)
 	{
 		logging_init (data_path);
-		nano::logger_mt logger;
 
 		auto tls_config (std::make_shared<nano::tls_config> ());
-		error = nano::read_tls_config_toml (data_path, *tls_config, logger);
+		error = nano::read_tls_config_toml (data_path, *tls_config, nlogger);
 		if (error)
 		{
 			std::cerr << error.get_message () << std::endl;

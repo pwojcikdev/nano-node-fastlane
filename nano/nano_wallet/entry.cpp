@@ -70,6 +70,9 @@ int run_wallet (QApplication & application, int argc, char * const * argv, boost
 {
 	nano::initialize_logging ();
 
+	nano::nlogger nlogger;
+	nlogger.info (nano::log::tag::daemon, "QT wallet started");
+
 	int result (0);
 	nano_qt::eventloop_processor processor;
 	boost::system::error_code error_chmod;
@@ -99,7 +102,6 @@ int run_wallet (QApplication & application, int argc, char * const * argv, boost
 
 	if (!error)
 	{
-		nano::nlogger nlogger;
 		nano::set_use_memory_pools (config.node.use_memory_pools);
 
 		config.node.logging.init (data_path);
