@@ -1,6 +1,6 @@
 #include <nano/lib/cli.hpp>
 #include <nano/lib/errors.hpp>
-#include <nano/lib/logger_mt.hpp>
+#include <nano/lib/logging.hpp>
 #include <nano/lib/signal_manager.hpp>
 #include <nano/lib/threading.hpp>
 #include <nano/lib/tlsconfig.hpp>
@@ -18,6 +18,8 @@
 
 namespace
 {
+nano::nlogger nlogger;
+
 void logging_init (boost::filesystem::path const & application_path_a)
 {
 	static std::atomic_flag logging_already_added = ATOMIC_FLAG_INIT;
@@ -38,8 +40,6 @@ volatile sig_atomic_t sig_int_or_term = 0;
 void run (boost::filesystem::path const & data_path, std::vector<std::string> const & config_overrides)
 {
 	nano::initialize_logging ();
-
-	nano::nlogger nlogger;
 	nlogger.info (nano::log::tag::daemon, "RPC daemon started");
 
 	boost::filesystem::create_directories (data_path);
@@ -58,7 +58,7 @@ void run (boost::filesystem::path const & data_path, std::vector<std::string> co
 		error = nano::read_tls_config_toml (data_path, *tls_config, nlogger);
 		if (error)
 		{
-			std::cerr << error.get_message () << std::endl;
+			nlogger.critical (nano::log::tag::daemon, "Error reading RPC TLS config: {}", error.get_message ());
 			std::exit (1);
 		}
 		else
@@ -93,12 +93,12 @@ void run (boost::filesystem::path const & data_path, std::vector<std::string> co
 		}
 		catch (std::runtime_error const & e)
 		{
-			std::cerr << "Error while running rpc (" << e.what () << ")\n";
+			nlogger.critical (nano::log::tag::daemon, "Error while running RPC: {}", e.what ());
 		}
 	}
 	else
 	{
-		std::cerr << "Error deserializing config: " << error.get_message () << std::endl;
+		nlogger.critical (nano::log::tag::daemon, "Error deserializing config: {}", error.get_message ());
 	}
 }
 }

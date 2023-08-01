@@ -25,13 +25,18 @@
 
 namespace
 {
+nano::nlogger nlogger;
+
 void show_error (std::string const & message_a)
 {
+	nlogger.critical (nano::log::tag::daemon, "{}", message_a);
+
 	QMessageBox message (QMessageBox::Critical, "Error starting Nano", message_a.c_str ());
 	message.setModal (true);
 	message.show ();
 	message.exec ();
 }
+
 void show_help (std::string const & message_a)
 {
 	QMessageBox message (QMessageBox::NoIcon, "Help", "see <a href=\"https://docs.nano.org/commands/command-line-interface/#launch-options\">launch options</a> ");
@@ -69,9 +74,7 @@ nano::error read_wallet_config (nano::wallet_config & config_a, boost::filesyste
 int run_wallet (QApplication & application, int argc, char * const * argv, boost::filesystem::path const & data_path, nano::node_flags const & flags)
 {
 	nano::initialize_logging ();
-
-	nano::nlogger nlogger;
-	nlogger.info (nano::log::tag::daemon, "QT wallet started");
+	nlogger.info (nano::log::tag::daemon, "Wallet started");
 
 	int result (0);
 	nano_qt::eventloop_processor processor;
