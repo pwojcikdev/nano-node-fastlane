@@ -10,7 +10,7 @@ namespace
 std::atomic<bool> initialized{ false };
 }
 
-void nano::initialize_logging ()
+void nano::initialize_logging (nano::log::preset preset)
 {
 	if (initialized.exchange (true))
 	{
@@ -18,8 +18,23 @@ void nano::initialize_logging ()
 		return;
 	}
 
-	spdlog::cfg::load_env_levels ();
 	spdlog::set_automatic_registration (false);
+
+	switch (preset)
+	{
+		case log::preset::normal:
+		{
+		}
+		break;
+		case log::preset::tests:
+		{
+			// Avoid cluttering the test runner output by default
+			spdlog::set_level (spdlog::level::off);
+		}
+		break;
+	}
+
+	spdlog::cfg::load_env_levels ();
 
 	//	auto logger = spdlog::basic_logger_mt ("default", "nano_log.txt");
 	auto logger = spdlog::stdout_color_mt ("default");

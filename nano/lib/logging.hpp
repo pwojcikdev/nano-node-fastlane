@@ -104,5 +104,5 @@ private:
 	static spdlog::level::level_enum to_spd_level (nano::log::level);
 };
 
-void initialize_logging ();
+void initialize_logging (nano::log::preset = nano::log::preset::normal);
 }

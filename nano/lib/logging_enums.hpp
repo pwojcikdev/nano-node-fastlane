@@ -110,6 +110,12 @@ enum class detail
 	requesting_pending,
 
 };
+
+enum class preset
+{
+	normal,
+	tests,
+};
 }
 
 namespace nano
