@@ -5,8 +5,19 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
+namespace
+{
+std::atomic<bool> initialized{ false };
+}
+
 void nano::initialize_logging ()
 {
+	if (initialized.exchange (true))
+	{
+		debug_assert (false && "nano::initialize_logging was called twice");
+		return;
+	}
+
 	spdlog::cfg::load_env_levels ();
 	spdlog::set_automatic_registration (false);
 
@@ -43,6 +54,8 @@ spdlog::logger & nano::nlogger::get_logger (nano::log::tag tag)
 
 std::shared_ptr<spdlog::logger> nano::nlogger::make_logger (nano::log::tag tag)
 {
+	debug_assert (initialized.load (), "nano::initialize_logging must be called before using nano::nlogger");
+
 	auto const & sinks = spdlog::default_logger ()->sinks ();
 	auto spd_logger = std::make_shared<spdlog::logger> (std::string{ nano::to_string (tag) }, sinks.begin (), sinks.end ());
 	spdlog::initialize_logger (spd_logger);

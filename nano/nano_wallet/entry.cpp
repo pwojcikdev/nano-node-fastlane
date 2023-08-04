@@ -73,7 +73,6 @@ nano::error read_wallet_config (nano::wallet_config & config_a, boost::filesyste
 
 int run_wallet (QApplication & application, int argc, char * const * argv, boost::filesystem::path const & data_path, nano::node_flags const & flags)
 {
-	nano::initialize_logging ();
 	nlogger.info (nano::log::tag::daemon, "Wallet started");
 
 	int result (0);
@@ -244,6 +243,8 @@ int run_wallet (QApplication & application, int argc, char * const * argv, boost
 int main (int argc, char * const * argv)
 {
 	nano::set_umask ();
+	nano::initialize_logging ();
+
 	nano::node_singleton_memory_pool_purge_guard memory_pool_cleanup_guard;
 
 	QApplication application (argc, const_cast<char **> (argv));
