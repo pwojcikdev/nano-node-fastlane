@@ -1,12 +1,16 @@
 #!/bin/bash
 set -euo pipefail
 
-apt-get update -qq && apt-get install -yqq \
-clang-15 \
-lldb
+CLANG_VERSION=16
 
-update-alternatives --install /usr/bin/cc cc /usr/bin/clang-15 100
-update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-15 100
+# TODO: Check hashes
+wget https://apt.llvm.org/llvm.sh
+chmod +x llvm.sh
+./llvm.sh $CLANG_VERSION
+
+update-alternatives --install /usr/bin/cc cc /usr/bin/clang-$CLANG_VERSION 100
+update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++-$CLANG_VERSION 100
+update-alternatives --install /usr/bin/lldb lldb /usr/bin/lldb-$CLANG_VERSION 100
 
 # Workaround to get a path that can be easily passed into cmake for BOOST_STACKTRACE_BACKTRACE_INCLUDE_FILE
 # See https://www.boost.org/doc/libs/1_70_0/doc/html/stacktrace/configuration_and_build.html#stacktrace.configuration_and_build.f3
