@@ -1,7 +1,6 @@
 #pragma once
 
 #include <nano/lib/config.hpp>
-#include <nano/lib/logger_mt.hpp>
 #include <nano/lib/logging.hpp>
 #include <nano/lib/stats.hpp>
 #include <nano/lib/work.hpp>
@@ -75,7 +74,7 @@ public:
 	nano::nlogger nlogger;
 
 public:
-	node (boost::asio::io_context &, uint16_t, boost::filesystem::path const &, nano::logging const &, nano::work_pool &, nano::node_flags = nano::node_flags (), unsigned seq = 0);
+	node (boost::asio::io_context &, uint16_t, boost::filesystem::path const &, nano::work_pool &, nano::node_flags = nano::node_flags (), unsigned seq = 0);
 	node (boost::asio::io_context &, boost::filesystem::path const &, nano::node_config const &, nano::work_pool &, nano::node_flags = nano::node_flags (), unsigned seq = 0);
 	~node ();
 
@@ -159,7 +158,6 @@ public:
 	nano::node_flags flags;
 	nano::work_pool & work;
 	nano::distributed_work_factory distributed_work;
-	nano::logger_mt logger;
 	std::unique_ptr<nano::store> store_impl;
 	nano::store & store;
 	nano::unchecked_map unchecked;

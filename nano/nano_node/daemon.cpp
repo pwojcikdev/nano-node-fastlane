@@ -81,8 +81,6 @@ void nano::daemon::run (boost::filesystem::path const & data_path, nano::node_fl
 	}
 	if (!error)
 	{
-		config.node.logging.init (data_path);
-
 		auto tls_config (std::make_shared<nano::tls_config> ());
 		error = nano::read_tls_config_toml (data_path, *tls_config, nlogger);
 		if (error)

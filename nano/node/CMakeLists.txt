@@ -141,8 +141,6 @@ add_library(
   lmdb/lmdb_txn.cpp
   lmdb/wallet_value.hpp
   lmdb/wallet_value.cpp
-  logging.hpp
-  logging.cpp
   network.hpp
   network.cpp
   nodeconfig.hpp
@@ -262,8 +260,6 @@ target_link_libraries(
   lmdb
   Boost::beast
   Boost::filesystem
-  Boost::log_setup
-  Boost::log
   Boost::program_options
   Boost::stacktrace
   Boost::system
