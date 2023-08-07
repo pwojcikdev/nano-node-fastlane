@@ -10,7 +10,7 @@ nano::block_processor::block_processor (nano::node & node_a, nano::write_databas
 	next_log (std::chrono::steady_clock::now ()),
 	node (node_a),
 	write_database_queue (write_database_queue_a),
-	state_block_signature_verification (node.checker, node.ledger.constants.epochs, node.config, node.logger, node.flags.block_processor_verification_size)
+	state_block_signature_verification (node.checker, node.ledger.constants.epochs, node.config, node.nlogger, node.flags.block_processor_verification_size)
 {
 	batch_processed.add ([this] (auto const & items) {
 		// For every batch item: notify the 'processed' observer.
@@ -190,7 +190,7 @@ bool nano::block_processor::should_log ()
 	auto now (std::chrono::steady_clock::now ());
 	if (next_log < now)
 	{
-		next_log = now + (node.config.logging.timing_logging () ? std::chrono::seconds (2) : std::chrono::seconds (15));
+		next_log = now + std::chrono::seconds (15);
 		result = true;
 	}
 	return result;

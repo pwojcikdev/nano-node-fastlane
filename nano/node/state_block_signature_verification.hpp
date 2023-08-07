@@ -10,7 +10,7 @@
 namespace nano
 {
 class epochs;
-class logger_mt;
+class nlogger;
 class node_config;
 class signature_checker;
 
@@ -19,7 +19,7 @@ class state_block_signature_verification
 public:
 	using value_type = std::tuple<std::shared_ptr<nano::block>>;
 
-	state_block_signature_verification (nano::signature_checker &, nano::epochs &, nano::node_config &, nano::logger_mt &, uint64_t);
+	state_block_signature_verification (nano::signature_checker &, nano::epochs &, nano::node_config &, nano::nlogger &, uint64_t);
 	~state_block_signature_verification ();
 	void add (value_type const & item);
 	std::size_t size ();
@@ -33,7 +33,7 @@ private:
 	nano::signature_checker & signature_checker;
 	nano::epochs & epochs;
 	nano::node_config & node_config;
-	nano::logger_mt & logger;
+	nano::nlogger & nlogger;
 
 	nano::mutex mutex{ mutex_identifier (mutexes::state_block_signature_verification) };
 	bool stopped{ false };
