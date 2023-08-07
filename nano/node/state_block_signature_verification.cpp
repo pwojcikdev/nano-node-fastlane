@@ -1,4 +1,4 @@
-#include <nano/lib/logger_mt.hpp>
+
 #include <nano/lib/numbers.hpp>
 #include <nano/lib/threading.hpp>
 #include <nano/lib/timer.hpp>
@@ -9,11 +9,11 @@
 
 #include <boost/format.hpp>
 
-nano::state_block_signature_verification::state_block_signature_verification (nano::signature_checker & signature_checker, nano::epochs & epochs, nano::node_config & node_config, nano::logger_mt & logger, uint64_t state_block_signature_verification_size) :
+nano::state_block_signature_verification::state_block_signature_verification (nano::signature_checker & signature_checker, nano::epochs & epochs, nano::node_config & node_config, nano::nlogger & nlogger, uint64_t state_block_signature_verification_size) :
 	signature_checker (signature_checker),
 	epochs (epochs),
 	node_config (node_config),
-	logger (logger),
+	nlogger (nlogger),
 	thread ([this, state_block_signature_verification_size] () {
 		nano::thread_role::set (nano::thread_role::name::state_block_signature_verification);
 		this->run (state_block_signature_verification_size);
