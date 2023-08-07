@@ -39,7 +39,9 @@ volatile sig_atomic_t sig_int_or_term = 0;
 
 void run (boost::filesystem::path const & data_path, std::vector<std::string> const & config_overrides)
 {
-	nlogger.info (nano::log::tag::daemon, "RPC daemon started");
+	nano::initialize_logging (nano::log::preset::daemon);
+
+	nlogger.info (nano::log::tag::daemon, "Daemon started (RPC)");
 
 	boost::filesystem::create_directories (data_path);
 	boost::system::error_code error_chmod;

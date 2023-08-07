@@ -73,7 +73,9 @@ nano::error read_wallet_config (nano::wallet_config & config_a, boost::filesyste
 
 int run_wallet (QApplication & application, int argc, char * const * argv, boost::filesystem::path const & data_path, nano::node_flags const & flags)
 {
-	nlogger.info (nano::log::tag::daemon, "Wallet started");
+	nano::initialize_logging (nano::log::preset::daemon);
+
+	nlogger.info (nano::log::tag::daemon, "Daemon started (wallet)");
 
 	int result (0);
 	nano_qt::eventloop_processor processor;

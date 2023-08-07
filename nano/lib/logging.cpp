@@ -12,24 +12,25 @@ std::atomic<bool> initialized{ false };
 
 void nano::initialize_logging (nano::log::preset preset)
 {
-	if (initialized.exchange (true))
-	{
-		debug_assert (false && "nano::initialize_logging was called twice");
-		return;
-	}
-
 	spdlog::set_automatic_registration (false);
 
 	switch (preset)
 	{
-		case log::preset::normal:
+		case log::preset::cli:
 		{
+			// Only display critical errors when using node CLI
+			spdlog::set_level (spdlog::level::critical);
+		}
+		break;
+		case log::preset::daemon:
+		{
+			spdlog::set_level (spdlog::level::info);
 		}
 		break;
 		case log::preset::tests:
 		{
-			// Avoid cluttering the test runner output by default
-			spdlog::set_level (spdlog::level::off);
+			// Avoid cluttering the test runner output
+			spdlog::set_level (spdlog::level::critical);
 		}
 		break;
 	}
@@ -39,6 +40,8 @@ void nano::initialize_logging (nano::log::preset preset)
 	//	auto logger = spdlog::basic_logger_mt ("default", "nano_log.txt");
 	auto logger = spdlog::stdout_color_mt ("default");
 	spdlog::set_default_logger (logger);
+
+	initialized = true;
 }
 
 /*

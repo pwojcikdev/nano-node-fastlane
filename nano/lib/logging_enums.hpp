@@ -113,7 +113,8 @@ enum class detail
 
 enum class preset
 {
-	normal,
+	cli,
+	daemon,
 	tests,
 };
 }
