@@ -13,7 +13,6 @@ class node;
 class ledger;
 class store;
 class network_params;
-class logger_mt;
 
 class epoch_upgrader final
 {
