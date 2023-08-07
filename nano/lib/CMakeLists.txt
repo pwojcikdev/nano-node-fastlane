@@ -47,7 +47,6 @@ add_library(
   lmdbconfig.cpp
   locks.hpp
   locks.cpp
-  logger_mt.hpp
   logging.hpp
   logging.cpp
   logging_enums.hpp
@@ -115,8 +114,6 @@ target_link_libraries(
   Boost::asio
   Boost::circular_buffer
   Boost::dll
-  Boost::log_setup
-  Boost::log
   Boost::multiprecision
   Boost::program_options
   Boost::stacktrace)

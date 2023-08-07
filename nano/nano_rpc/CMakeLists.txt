@@ -6,8 +6,6 @@ target_link_libraries(
   node
   secure
   Boost::filesystem
-  Boost::log_setup
-  Boost::log
   Boost::program_options
   Boost::system
   Boost::thread)

@@ -70,9 +70,7 @@ target_link_libraries(
   secure
   test_common
   gtest
-  libminiupnpc-static
-  Boost::log_setup
-  Boost::log)
+  libminiupnpc-static)
 
 include_directories(${CMAKE_SOURCE_DIR}/submodules)
 include_directories(${CMAKE_SOURCE_DIR}/submodules/cpptoml/include)
