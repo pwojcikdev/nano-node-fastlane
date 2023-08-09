@@ -349,13 +349,13 @@ nano::node::node (boost::asio::io_context & io_ctx_a, boost::filesystem::path co
 			this->distributed_work.cancel (root_a);
 		});
 
+		auto const network_label = network_params.network.get_current_network_as_string ();
+
 		nlogger.info (nano::log::tag::node, "Node starting, version: {}", NANO_VERSION_STRING);
 		nlogger.info (nano::log::tag::node, "Build information: {}", BUILD_INFO);
-		nlogger.info (nano::log::tag::node, "Database backend: {}", store.vendor_get ());
-
-		auto const network_label = network_params.network.get_current_network_as_string ();
 		nlogger.info (nano::log::tag::node, "Active network: {}", network_label);
-
+		nlogger.info (nano::log::tag::node, "Database backend: {}", store.vendor_get ());
+		nlogger.info (nano::log::tag::node, "Data path: {}", application_path.string ());
 		nlogger.info (nano::log::tag::node, "Work pool threads: {} ({})", work.threads.size (), (work.opencl ? "OpenCL" : "CPU"));
 		nlogger.info (nano::log::tag::node, "Work peers: {}", config.work_peers.size ());
 
@@ -364,7 +364,9 @@ nano::node::node (boost::asio::io_context & io_ctx_a, boost::filesystem::path co
 			nlogger.info (nano::log::tag::node, "Work generation is disabled");
 		}
 
-		nlogger.info (nano::log::tag::node, "Outbound bandwidth limit: {} bytes/s, burst ratio: {}", config.bandwidth_limit, config.bandwidth_limit_burst_ratio);
+		nlogger.info (nano::log::tag::node, "Outbound bandwidth limit: {} bytes/s, burst ratio: {}",
+		config.bandwidth_limit,
+		config.bandwidth_limit_burst_ratio);
 
 		// First do a pass with a read to see if any writing needs doing, this saves needing to open a write lock (and potentially blocking)
 		auto is_initialized (false);
