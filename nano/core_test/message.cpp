@@ -243,22 +243,6 @@ TEST (message, confirm_req_hash_batch_serialization)
 	ASSERT_EQ (header.count_get (), req.roots_hashes.size ());
 }
 
-// this unit test checks that conversion of message_header to string works as expected
-TEST (message, message_header_to_string)
-{
-	// calculate expected string
-	int maxver = nano::dev::network_params.network.protocol_version;
-	int minver = nano::dev::network_params.network.protocol_version_min;
-	std::stringstream ss;
-	ss << "NetID: 5241(dev), VerMaxUsingMin: " << maxver << "/" << maxver << "/" << minver << ", MsgType: 2(keepalive), Extensions: 0000";
-	auto expected_str = ss.str ();
-
-	// check expected vs real
-	nano::keepalive keepalive_msg{ nano::dev::network_params.network };
-	std::string header_string = keepalive_msg.header.to_string ();
-	ASSERT_EQ (expected_str, header_string);
-}
-
 /**
  * Test that a confirm_ack can encode an empty hash set
  */
@@ -424,11 +408,11 @@ TEST (message, asc_pull_ack_serialization_account_info)
 
 	nano::asc_pull_ack::account_info_payload original_payload;
 	original_payload.account = nano::test::random_account ();
-	original_payload.account_open = nano::test::random_hash ();
-	original_payload.account_head = nano::test::random_hash ();
-	original_payload.account_block_count = 932932132;
-	original_payload.account_conf_frontier = nano::test::random_hash ();
-	original_payload.account_conf_height = 847312;
+	original_payload.open = nano::test::random_hash ();
+	original_payload.head = nano::test::random_hash ();
+	original_payload.block_count = 932932132;
+	original_payload.conf_frontier = nano::test::random_hash ();
+	original_payload.conf_height = 847312;
 
 	original.payload = original_payload;
 	original.update_header ();
@@ -457,11 +441,11 @@ TEST (message, asc_pull_ack_serialization_account_info)
 	ASSERT_NO_THROW (message_payload = std::get<nano::asc_pull_ack::account_info_payload> (message.payload));
 
 	ASSERT_EQ (original_payload.account, message_payload.account);
-	ASSERT_EQ (original_payload.account_open, message_payload.account_open);
-	ASSERT_EQ (original_payload.account_head, message_payload.account_head);
-	ASSERT_EQ (original_payload.account_block_count, message_payload.account_block_count);
-	ASSERT_EQ (original_payload.account_conf_frontier, message_payload.account_conf_frontier);
-	ASSERT_EQ (original_payload.account_conf_height, message_payload.account_conf_height);
+	ASSERT_EQ (original_payload.open, message_payload.open);
+	ASSERT_EQ (original_payload.head, message_payload.head);
+	ASSERT_EQ (original_payload.block_count, message_payload.block_count);
+	ASSERT_EQ (original_payload.conf_frontier, message_payload.conf_frontier);
+	ASSERT_EQ (original_payload.conf_height, message_payload.conf_height);
 
 	ASSERT_TRUE (nano::at_end (stream));
 }

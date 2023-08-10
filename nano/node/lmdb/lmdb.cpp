@@ -38,7 +38,7 @@ void mdb_val::convert_buffer_to_value ()
 }
 }
 
-nano::lmdb::store::store (nano::logger_mt & logger_a, boost::filesystem::path const & path_a, nano::ledger_constants & constants, nano::txn_tracking_config const & txn_tracking_config_a, std::chrono::milliseconds block_processor_batch_max_time_a, nano::lmdb_config const & lmdb_config_a, bool backup_before_upgrade_a) :
+nano::lmdb::store::store (nano::nlogger & nlogger_a, boost::filesystem::path const & path_a, nano::ledger_constants & constants, nano::txn_tracking_config const & txn_tracking_config_a, std::chrono::milliseconds block_processor_batch_max_time_a, nano::lmdb_config const & lmdb_config_a, bool backup_before_upgrade_a) :
 	// clang-format off
 	nano::store{
 		block_store,
@@ -63,9 +63,9 @@ nano::lmdb::store::store (nano::logger_mt & logger_a, boost::filesystem::path co
 	confirmation_height_store{ *this },
 	final_vote_store{ *this },
 	version_store{ *this },
-	logger (logger_a),
+	nlogger (nlogger_a),
 	env (error, path_a, nano::mdb_env::options::make ().set_config (lmdb_config_a).set_use_no_mem_init (true)),
-	mdb_txn_tracker (logger_a, txn_tracking_config_a, block_processor_batch_max_time_a),
+	mdb_txn_tracker (nlogger_a, txn_tracking_config_a, block_processor_batch_max_time_a),
 	txn_tracking_enabled (txn_tracking_config_a.enable)
 {
 	if (!error)
@@ -92,10 +92,11 @@ nano::lmdb::store::store (nano::logger_mt & logger_a, boost::filesystem::path co
 		{
 			if (!is_fresh_db)
 			{
-				logger.always_log ("Upgrade in progress...");
+				nlogger.info (nano::log::tag::lmdb, "Upgrade in progress...");
+
 				if (backup_before_upgrade_a)
 				{
-					create_backup_file (env, path_a, logger_a);
+					create_backup_file (env, path_a, nlogger);
 				}
 			}
 			auto needs_vacuuming = false;
@@ -110,9 +111,18 @@ nano::lmdb::store::store (nano::logger_mt & logger_a, boost::filesystem::path co
 
 			if (needs_vacuuming)
 			{
-				logger.always_log ("Preparing vacuum...");
+				nlogger.info (nano::log::tag::lmdb, "Ledger vaccum in progress...");
+
 				auto vacuum_success = vacuum_after_upgrade (path_a, lmdb_config_a);
-				logger.always_log (vacuum_success ? "Vacuum succeeded." : "Failed to vacuum. (Optional) Ensure enough disk space is available for a copy of the database and try to vacuum after shutting down the node");
+				if (vacuum_success)
+				{
+					nlogger.info (nano::log::tag::lmdb, "Ledger vacuum completed");
+				}
+				else
+				{
+					nlogger.error (nano::log::tag::lmdb, "Ledger vaccum failed");
+					nlogger.error (nano::log::tag::lmdb, "(Optional) Please ensure enough disk space is available for a copy of the database and try to vacuum after shutting down the node");
+				}
 			}
 		}
 		else
@@ -275,7 +285,7 @@ bool nano::lmdb::store::do_upgrades (nano::write_transaction & transaction_a, na
 		case 11:
 		case 12:
 		case 13:
-			logger.always_log (boost::str (boost::format ("The version of the ledger (%1%) is lower than the minimum (%2%) which is supported for upgrades. Either upgrade to a v19, v20 or v21 node first or delete the ledger.") % version_l % version_minimum));
+			nlogger.critical (nano::log::tag::lmdb, "The version of the ledger ({}) is lower than the minimum ({}) which is supported for upgrades. Either upgrade a node first or delete the ledger.", version_l, version_minimum);
 			error = true;
 			break;
 		case 14:
@@ -308,7 +318,7 @@ bool nano::lmdb::store::do_upgrades (nano::write_transaction & transaction_a, na
 		case 22:
 			break;
 		default:
-			logger.always_log (boost::str (boost::format ("The version of the ledger (%1%) is too high for this node") % version_l));
+			nlogger.critical (nano::log::tag::lmdb, "The version of the ledger ({}) is too high for this node", version_l);
 			error = true;
 			break;
 	}
@@ -317,7 +327,7 @@ bool nano::lmdb::store::do_upgrades (nano::write_transaction & transaction_a, na
 
 void nano::lmdb::store::upgrade_v14_to_v15 (nano::write_transaction & transaction_a)
 {
-	logger.always_log ("Preparing v14 to v15 database upgrade...");
+	nlogger.info (nano::log::tag::lmdb, "Upgrading database from v14 to v15...");
 
 	std::vector<std::pair<nano::account, nano::account_info>> account_infos;
 	upgrade_counters account_counters (count (transaction_a, account_store.accounts_v0_handle), count (transaction_a, account_store.accounts_v1_handle));
@@ -339,7 +349,7 @@ void nano::lmdb::store::upgrade_v14_to_v15 (nano::write_transaction & transactio
 		i_account.from_first_database ? ++account_counters.after_v0 : ++account_counters.after_v1;
 	}
 
-	logger.always_log ("Finished extracting confirmation height to its own database");
+	nlogger.debug (nano::log::tag::lmdb, "Finished extracting confirmation height to its own database");
 
 	debug_assert (account_counters.are_equal ());
 	// No longer need accounts_v1, keep v0 but clear it
@@ -352,7 +362,7 @@ void nano::lmdb::store::upgrade_v14_to_v15 (nano::write_transaction & transactio
 		mdb_put (env.tx (transaction_a), account_store.accounts_handle, nano::mdb_val (account_account_info_pair.first), nano::mdb_val (account_info), MDB_APPEND);
 	}
 
-	logger.always_log ("Epoch merge upgrade: Finished accounts, now doing state blocks");
+	nlogger.debug (nano::log::tag::lmdb, "Epoch merge upgrade: Finished accounts, now doing state blocks");
 
 	account_infos.clear ();
 
@@ -389,13 +399,14 @@ void nano::lmdb::store::upgrade_v14_to_v15 (nano::write_transaction & transactio
 		constexpr auto output_cutoff = 1000000;
 		if (num % output_cutoff == 0 && num != 0)
 		{
-			logger.always_log (boost::str (boost::format ("Database epoch merge upgrade %1% million state blocks upgraded") % (num / output_cutoff)));
+			nlogger.debug (nano::log::tag::lmdb, "Database epoch merge upgrade {} million state blocks upgraded", num / output_cutoff);
 		}
 		i_state.from_first_database ? ++state_counters.after_v0 : ++state_counters.after_v1;
 	}
 
 	debug_assert (state_counters.are_equal ());
-	logger.always_log ("Epoch merge upgrade: Finished state blocks, now doing pending blocks");
+
+	nlogger.debug (nano::log::tag::lmdb, "Epoch merge upgrade: Finished state blocks, now doing pending blocks");
 
 	block_store.state_blocks_handle = state_blocks_new;
 
@@ -430,11 +441,14 @@ void nano::lmdb::store::upgrade_v14_to_v15 (nano::write_transaction & transactio
 	}
 
 	version.put (transaction_a, 15);
-	logger.always_log ("Finished epoch merge upgrade");
+
+	nlogger.info (nano::log::tag::lmdb, "Upgrading database from v14 to v15 completed");
 }
 
 void nano::lmdb::store::upgrade_v15_to_v16 (nano::write_transaction const & transaction_a)
 {
+	nlogger.info (nano::log::tag::lmdb, "Upgrading database from v15 to v16...");
+
 	// Representation table is no longer used
 	debug_assert (account_store.representation_handle != 0);
 	if (account_store.representation_handle != 0)
@@ -443,12 +457,15 @@ void nano::lmdb::store::upgrade_v15_to_v16 (nano::write_transaction const & tran
 		release_assert (status == MDB_SUCCESS);
 		account_store.representation_handle = 0;
 	}
+
 	version.put (transaction_a, 16);
+
+	nlogger.info (nano::log::tag::lmdb, "Upgrading database from v15 to v16 completed");
 }
 
 void nano::lmdb::store::upgrade_v16_to_v17 (nano::write_transaction const & transaction_a)
 {
-	logger.always_log ("Preparing v16 to v17 database upgrade...");
+	nlogger.info (nano::log::tag::lmdb, "Upgrading database from v16 to v17...");
 
 	auto account_info_i = account.begin (transaction_a);
 	auto account_info_n = account.end ();
@@ -508,7 +525,7 @@ void nano::lmdb::store::upgrade_v16_to_v17 (nano::write_transaction const & tran
 		constexpr auto output_cutoff = 200000;
 		if (num % output_cutoff == 0 && num != 0)
 		{
-			logger.always_log (boost::str (boost::format ("Confirmation height frontier set for %1%00k accounts") % ((num / output_cutoff) * 2)));
+			nlogger.debug (nano::log::tag::lmdb, "Confirmation height frontier set for {}00k accounts", (num / output_cutoff) * 2);
 		}
 	}
 
@@ -522,12 +539,13 @@ void nano::lmdb::store::upgrade_v16_to_v17 (nano::write_transaction const & tran
 	}
 
 	version.put (transaction_a, 17);
-	logger.always_log ("Finished upgrading confirmation height frontiers");
+
+	nlogger.info (nano::log::tag::lmdb, "Upgrading database from v16 to v17 completed");
 }
 
 void nano::lmdb::store::upgrade_v17_to_v18 (nano::write_transaction const & transaction_a, nano::ledger_constants & constants)
 {
-	logger.always_log ("Preparing v17 to v18 database upgrade...");
+	nlogger.info (nano::log::tag::lmdb, "Upgrading database from v17 to v18...");
 
 	auto count_pre (count (transaction_a, block_store.state_blocks_handle));
 
@@ -576,7 +594,7 @@ void nano::lmdb::store::upgrade_v17_to_v18 (nano::write_transaction const & tran
 		constexpr auto output_cutoff = 1000000;
 		if (num > 0 && num % output_cutoff == 0)
 		{
-			logger.always_log (boost::str (boost::format ("Database sideband upgrade %1% million state blocks upgraded (out of %2%)") % (num / output_cutoff) % count_pre));
+			nlogger.debug (nano::log::tag::lmdb, "Database sideband upgrade {} million state blocks upgraded (out of {})", (num / output_cutoff), count_pre);
 		}
 	}
 
@@ -584,12 +602,14 @@ void nano::lmdb::store::upgrade_v17_to_v18 (nano::write_transaction const & tran
 	release_assert (count_pre == count_post);
 
 	version.put (transaction_a, 18);
-	logger.always_log ("Finished upgrading the sideband");
+
+	nlogger.info (nano::log::tag::lmdb, "Upgrading database from v17 to v18 completed");
 }
 
 void nano::lmdb::store::upgrade_v18_to_v19 (nano::write_transaction const & transaction_a)
 {
-	logger.always_log ("Preparing v18 to v19 database upgrade...");
+	nlogger.info (nano::log::tag::lmdb, "Upgrading database from v18 to v19...");
+
 	auto count_pre (count (transaction_a, block_store.state_blocks_handle) + count (transaction_a, block_store.send_blocks_handle) + count (transaction_a, block_store.receive_blocks_handle) + count (transaction_a, block_store.change_blocks_handle) + count (transaction_a, block_store.open_blocks_handle));
 
 	// Combine in order of likeliness of counts
@@ -623,7 +643,7 @@ void nano::lmdb::store::upgrade_v18_to_v19 (nano::write_transaction const & tran
 	release_assert (!mdb_drop (env.tx (transaction_a), block_store.change_blocks_handle, 1));
 	block_store.change_blocks_handle = 0;
 
-	logger.always_log ("Write legacy open/receive/change to new format");
+	nlogger.debug (nano::log::tag::lmdb, "Write legacy open/receive/change to new format");
 
 	MDB_dbi temp_legacy_open_receive_change_blocks;
 	{
@@ -644,7 +664,7 @@ void nano::lmdb::store::upgrade_v18_to_v19 (nano::write_transaction const & tran
 		}
 	}
 
-	logger.always_log ("Write legacy send to new format");
+	nlogger.debug (nano::log::tag::lmdb, "Write legacy send to new format");
 
 	// Write send blocks to a new table (this was not done in memory as it would push us above memory requirements)
 	MDB_dbi temp_legacy_send_blocks;
@@ -671,7 +691,7 @@ void nano::lmdb::store::upgrade_v18_to_v19 (nano::write_transaction const & tran
 	release_assert (!mdb_drop (env.tx (transaction_a), block_store.send_blocks_handle, 1));
 	block_store.send_blocks_handle = 0;
 
-	logger.always_log ("Merge legacy open/receive/change with legacy send blocks");
+	nlogger.debug (nano::log::tag::lmdb, "Merge legacy open/receive/change with legacy send blocks");
 
 	MDB_dbi temp_legacy_send_open_receive_change_blocks;
 	{
@@ -690,7 +710,7 @@ void nano::lmdb::store::upgrade_v18_to_v19 (nano::write_transaction const & tran
 		mdb_drop (env.tx (transaction_a), temp_legacy_open_receive_change_blocks, 1);
 	}
 
-	logger.always_log ("Write state blocks to new format");
+	nlogger.debug (nano::log::tag::lmdb, "Write state blocks to new format");
 
 	// Write state blocks to a new table (this was not done in memory as it would push us above memory requirements)
 	MDB_dbi temp_state_blocks;
@@ -736,7 +756,7 @@ void nano::lmdb::store::upgrade_v18_to_v19 (nano::write_transaction const & tran
 	release_assert (!mdb_drop (env.tx (transaction_a), block_store.state_blocks_handle, 1));
 	block_store.state_blocks_handle = 0;
 
-	logger.always_log ("Merging all legacy blocks with state blocks");
+	nlogger.debug (nano::log::tag::lmdb, "Merging all legacy blocks with state blocks");
 
 	// Merge all legacy blocks with state blocks into the final table
 	nano::mdb_merge_iterator<nano::block_hash, nano::block_w_sideband> i (transaction_a, temp_legacy_send_open_receive_change_blocks, temp_state_blocks);
@@ -760,37 +780,44 @@ void nano::lmdb::store::upgrade_v18_to_v19 (nano::write_transaction const & tran
 	release_assert (!mdb_drop (env.tx (transaction_a), vote, 1));
 
 	version.put (transaction_a, 19);
-	logger.always_log ("Finished upgrading all blocks to new blocks database");
+
+	nlogger.info (nano::log::tag::lmdb, "Upgrading database from v18 to v19 completed");
 }
 
 void nano::lmdb::store::upgrade_v19_to_v20 (nano::write_transaction const & transaction_a)
 {
-	logger.always_log ("Preparing v19 to v20 database upgrade...");
+	nlogger.info (nano::log::tag::lmdb, "Upgrading database from v19 to v20...");
+
 	mdb_dbi_open (env.tx (transaction_a), "pruned", MDB_CREATE, &pruned_store.pruned_handle);
 	version.put (transaction_a, 20);
-	logger.always_log ("Finished creating new pruned table");
+
+	nlogger.info (nano::log::tag::lmdb, "Upgrading database from v19 to v20 completed");
 }
 
 void nano::lmdb::store::upgrade_v20_to_v21 (nano::write_transaction const & transaction_a)
 {
-	logger.always_log ("Preparing v20 to v21 database upgrade...");
+	nlogger.info (nano::log::tag::lmdb, "Upgrading database from v20 to v21...");
+
 	mdb_dbi_open (env.tx (transaction_a), "final_votes", MDB_CREATE, &final_vote_store.final_votes_handle);
 	version.put (transaction_a, 21);
-	logger.always_log ("Finished creating new final_vote table");
+
+	nlogger.info (nano::log::tag::lmdb, "Upgrading database from v20 to v21 completed");
 }
 
 void nano::lmdb::store::upgrade_v21_to_v22 (nano::write_transaction const & transaction_a)
 {
-	logger.always_log ("Preparing v21 to v22 database upgrade...");
+	nlogger.info (nano::log::tag::lmdb, "Upgrading database from v21 to v22...");
+
 	MDB_dbi unchecked_handle{ 0 };
 	release_assert (!mdb_dbi_open (env.tx (transaction_a), "unchecked", MDB_CREATE, &unchecked_handle));
 	release_assert (!mdb_drop (env.tx (transaction_a), unchecked_handle, 1)); // del = 1, to delete it from the environment and close the DB handle.
 	version.put (transaction_a, 22);
-	logger.always_log ("Finished removing unchecked table");
+
+	nlogger.info (nano::log::tag::lmdb, "Upgrading database from v21 to v22 completed");
 }
 
 /** Takes a filepath, appends '_backup_<timestamp>' to the end (but before any extension) and saves that file in the same directory */
-void nano::lmdb::store::create_backup_file (nano::mdb_env & env_a, boost::filesystem::path const & filepath_a, nano::logger_mt & logger_a)
+void nano::lmdb::store::create_backup_file (nano::mdb_env & env_a, boost::filesystem::path const & filepath_a, nano::nlogger & nlogger)
 {
 	auto extension = filepath_a.extension ();
 	auto filename_without_extension = filepath_a.filename ().replace_extension ("");
@@ -801,22 +828,18 @@ void nano::lmdb::store::create_backup_file (nano::mdb_env & env_a, boost::filesy
 	backup_filename += std::to_string (std::chrono::system_clock::now ().time_since_epoch ().count ());
 	backup_filename += extension;
 	auto backup_filepath = backup_path / backup_filename;
-	auto start_message (boost::str (boost::format ("Performing %1% backup before database upgrade...") % filepath_a.filename ()));
-	logger_a.always_log (start_message);
-	std::cout << start_message << std::endl;
+
+	nlogger.info (nano::log::tag::lmdb, "Performing {} backup before database upgrade...", filepath_a.filename ().string ());
+
 	auto error (mdb_env_copy (env_a, backup_filepath.string ().c_str ()));
 	if (error)
 	{
-		auto error_message (boost::str (boost::format ("%1% backup failed") % filepath_a.filename ()));
-		logger_a.always_log (error_message);
-		std::cerr << error_message << std::endl;
+		nlogger.critical (nano::log::tag::lmdb, "Database backup failed");
 		std::exit (1);
 	}
 	else
 	{
-		auto success_message (boost::str (boost::format ("Backup created: %1%") % backup_filename));
-		logger_a.always_log (success_message);
-		std::cout << success_message << std::endl;
+		nlogger.info (nano::log::tag::lmdb, "Database backup completed. Backup can be found at: {}", backup_filepath.string ());
 	}
 }
 

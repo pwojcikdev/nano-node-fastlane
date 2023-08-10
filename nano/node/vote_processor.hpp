@@ -17,7 +17,7 @@ class store;
 class node_observers;
 class stats;
 class node_config;
-class logger_mt;
+class nlogger;
 class online_reps;
 class rep_crawler;
 class ledger;
@@ -34,7 +34,7 @@ namespace transport
 class vote_processor final
 {
 public:
-	vote_processor (nano::signature_checker & checker_a, nano::active_transactions & active_a, nano::node_observers & observers_a, nano::stats & stats_a, nano::node_config & config_a, nano::node_flags & flags_a, nano::logger_mt & logger_a, nano::online_reps & online_reps_a, nano::rep_crawler & rep_crawler_a, nano::ledger & ledger_a, nano::network_params & network_params_a);
+	vote_processor (nano::signature_checker & checker_a, nano::active_transactions & active_a, nano::node_observers & observers_a, nano::stats & stats_a, nano::node_config & config_a, nano::node_flags & flags_a, nano::nlogger &, nano::online_reps & online_reps_a, nano::rep_crawler & rep_crawler_a, nano::ledger & ledger_a, nano::network_params & network_params_a);
 
 	/** Returns false if the vote was processed */
 	bool vote (std::shared_ptr<nano::vote> const &, std::shared_ptr<nano::transport::channel> const &);
@@ -59,7 +59,7 @@ private:
 	nano::node_observers & observers;
 	nano::stats & stats;
 	nano::node_config & config;
-	nano::logger_mt & logger;
+	nano::nlogger & nlogger;
 	nano::online_reps & online_reps;
 	nano::rep_crawler & rep_crawler;
 	nano::ledger & ledger;

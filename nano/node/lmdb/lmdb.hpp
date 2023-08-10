@@ -2,7 +2,7 @@
 
 #include <nano/lib/diagnosticsconfig.hpp>
 #include <nano/lib/lmdbconfig.hpp>
-#include <nano/lib/logger_mt.hpp>
+#include <nano/lib/logging.hpp>
 #include <nano/lib/numbers.hpp>
 #include <nano/node/lmdb/account_store.hpp>
 #include <nano/node/lmdb/block_store.hpp>
@@ -36,14 +36,13 @@ namespace nano
 {
 using mdb_val = db_val<MDB_val>;
 
-class logging_mt;
 class transaction;
 
 namespace lmdb
 {
 	/**
- * mdb implementation of the block store
- */
+	 * mdb implementation of the block store
+	 */
 	class store : public nano::store
 	{
 	private:
@@ -70,7 +69,7 @@ namespace lmdb
 		friend class nano::lmdb::version_store;
 
 	public:
-		store (nano::logger_mt &, boost::filesystem::path const &, nano::ledger_constants & constants, nano::txn_tracking_config const & txn_tracking_config_a = nano::txn_tracking_config{}, std::chrono::milliseconds block_processor_batch_max_time_a = std::chrono::milliseconds (5000), nano::lmdb_config const & lmdb_config_a = nano::lmdb_config{}, bool backup_before_upgrade = false);
+		store (nano::nlogger &, boost::filesystem::path const &, nano::ledger_constants & constants, nano::txn_tracking_config const & txn_tracking_config_a = nano::txn_tracking_config{}, std::chrono::milliseconds block_processor_batch_max_time_a = std::chrono::milliseconds (5000), nano::lmdb_config const & lmdb_config_a = nano::lmdb_config{}, bool backup_before_upgrade = false);
 		nano::write_transaction tx_begin_write (std::vector<nano::tables> const & tables_requiring_lock = {}, std::vector<nano::tables> const & tables_no_lock = {}) override;
 		nano::read_transaction tx_begin_read () const override;
 
@@ -78,14 +77,14 @@ namespace lmdb
 
 		void serialize_mdb_tracker (boost::property_tree::ptree &, std::chrono::milliseconds, std::chrono::milliseconds) override;
 
-		static void create_backup_file (nano::mdb_env &, boost::filesystem::path const &, nano::logger_mt &);
+		static void create_backup_file (nano::mdb_env &, boost::filesystem::path const &, nano::nlogger &);
 
 		void serialize_memory_stats (boost::property_tree::ptree &) override;
 
 		unsigned max_block_write_batch_num () const override;
 
 	private:
-		nano::logger_mt & logger;
+		nano::nlogger & nlogger;
 		bool error{ false };
 
 	public:

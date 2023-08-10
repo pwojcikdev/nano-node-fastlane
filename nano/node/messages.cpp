@@ -19,6 +19,7 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
+#include <ranges>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -78,105 +79,6 @@ bool nano::message_header::deserialize (nano::stream & stream_a)
 	}
 
 	return error;
-}
-
-std::string nano::to_string (nano::message_type type)
-{
-	switch (type)
-	{
-		case nano::message_type::invalid:
-			return "invalid";
-		case nano::message_type::not_a_type:
-			return "not_a_type";
-		case nano::message_type::keepalive:
-			return "keepalive";
-		case nano::message_type::publish:
-			return "publish";
-		case nano::message_type::confirm_req:
-			return "confirm_req";
-		case nano::message_type::confirm_ack:
-			return "confirm_ack";
-		case nano::message_type::bulk_pull:
-			return "bulk_pull";
-		case nano::message_type::bulk_push:
-			return "bulk_push";
-		case nano::message_type::frontier_req:
-			return "frontier_req";
-		case nano::message_type::node_id_handshake:
-			return "node_id_handshake";
-		case nano::message_type::bulk_pull_account:
-			return "bulk_pull_account";
-		case nano::message_type::telemetry_req:
-			return "telemetry_req";
-		case nano::message_type::telemetry_ack:
-			return "telemetry_ack";
-		case nano::message_type::asc_pull_req:
-			return "asc_pull_req";
-		case nano::message_type::asc_pull_ack:
-			return "asc_pull_ack";
-			// default case intentionally omitted to cause warnings for unhandled enums
-	}
-
-	return "n/a";
-}
-
-nano::stat::detail nano::to_stat_detail (nano::message_type type)
-{
-	switch (type)
-	{
-		case nano::message_type::invalid:
-			return nano::stat::detail::invalid;
-		case nano::message_type::not_a_type:
-			return nano::stat::detail::not_a_type;
-		case nano::message_type::keepalive:
-			return nano::stat::detail::keepalive;
-		case nano::message_type::publish:
-			return nano::stat::detail::publish;
-		case nano::message_type::confirm_req:
-			return nano::stat::detail::confirm_req;
-		case nano::message_type::confirm_ack:
-			return nano::stat::detail::confirm_ack;
-		case nano::message_type::bulk_pull:
-			return nano::stat::detail::bulk_pull;
-		case nano::message_type::bulk_push:
-			return nano::stat::detail::bulk_push;
-		case nano::message_type::frontier_req:
-			return nano::stat::detail::frontier_req;
-		case nano::message_type::node_id_handshake:
-			return nano::stat::detail::node_id_handshake;
-		case nano::message_type::bulk_pull_account:
-			return nano::stat::detail::bulk_pull_account;
-		case nano::message_type::telemetry_req:
-			return nano::stat::detail::telemetry_req;
-		case nano::message_type::telemetry_ack:
-			return nano::stat::detail::telemetry_ack;
-		case nano::message_type::asc_pull_req:
-			return nano::stat::detail::asc_pull_req;
-		case nano::message_type::asc_pull_ack:
-			return nano::stat::detail::asc_pull_ack;
-			// default case intentionally omitted to cause warnings for unhandled enums
-	}
-	debug_assert (false);
-	return {};
-}
-
-std::string nano::message_header::to_string () const
-{
-	// Cast to uint16_t to get integer value since uint8_t is treated as an unsigned char in string formatting.
-	uint16_t type_l = static_cast<uint16_t> (type);
-	uint16_t version_max_l = static_cast<uint16_t> (version_max);
-	uint16_t version_using_l = static_cast<uint16_t> (version_using);
-	uint16_t version_min_l = static_cast<uint16_t> (version_min);
-	std::string type_text = nano::to_string (type);
-
-	std::stringstream stream;
-
-	stream << boost::format ("NetID: %1%(%2%), ") % nano::to_string_hex (static_cast<uint16_t> (network)) % nano::network::to_string (network);
-	stream << boost::format ("VerMaxUsingMin: %1%/%2%/%3%, ") % version_max_l % version_using_l % version_min_l;
-	stream << boost::format ("MsgType: %1%(%2%), ") % type_l % type_text;
-	stream << boost::format ("Extensions: %1%") % nano::to_string_hex (static_cast<uint16_t> (extensions.to_ulong ()));
-
-	return stream.str ();
 }
 
 nano::block_type nano::message_header::block_type () const
@@ -337,6 +239,17 @@ bool nano::message_header::is_valid_message_type () const
 	}
 }
 
+void nano::message_header::operator() (nano::object_stream & obs) const
+{
+	obs.write ("type", type);
+	obs.write ("network", nano::to_string (network));
+	obs.write ("network_int", static_cast<uint16_t> (network));
+	obs.write ("version", static_cast<uint16_t> (version_using));
+	obs.write ("version_min", static_cast<uint16_t> (version_min));
+	obs.write ("version_max", static_cast<uint16_t> (version_max));
+	obs.write ("extensions", static_cast<uint16_t> (extensions.to_ulong ()));
+}
+
 /*
  * message
  */
@@ -367,6 +280,11 @@ nano::shared_const_buffer nano::message::to_shared_const_buffer () const
 nano::message_type nano::message::type () const
 {
 	return header.type;
+}
+
+void nano::message::operator() (nano::object_stream & obs) const
+{
+	obs.write ("header", header);
 }
 
 /*
@@ -434,19 +352,11 @@ bool nano::keepalive::operator== (nano::keepalive const & other_a) const
 	return peers == other_a.peers;
 }
 
-std::string nano::keepalive::to_string () const
+void nano::keepalive::operator() (nano::object_stream & obs) const
 {
-	std::stringstream stream;
+	nano::message::operator() (obs); // Write common data
 
-	stream << header.to_string ();
-
-	for (auto peer = peers.begin (); peer != peers.end (); ++peer)
-	{
-		stream << "\n"
-			   << peer->address ().to_string () + ":" + std::to_string (peer->port ());
-	}
-
-	return stream.str ();
+	obs.write ("peers", peers);
 }
 
 /*
@@ -495,9 +405,11 @@ bool nano::publish::operator== (nano::publish const & other_a) const
 	return *block == *other_a.block;
 }
 
-std::string nano::publish::to_string () const
+void nano::publish::operator() (nano::object_stream & obs) const
 {
-	return header.to_string () + "\n" + block->to_json ();
+	nano::message::operator() (obs); // Write common data
+
+	obs.write ("block", block);
 }
 
 /*
@@ -617,19 +529,6 @@ bool nano::confirm_req::operator== (nano::confirm_req const & other_a) const
 	return equal;
 }
 
-std::string nano::confirm_req::roots_string () const
-{
-	std::string result;
-	for (auto & root_hash : roots_hashes)
-	{
-		result += root_hash.first.to_string ();
-		result += ":";
-		result += root_hash.second.to_string ();
-		result += ", ";
-	}
-	return result;
-}
-
 std::size_t nano::confirm_req::size (nano::block_type type_a, std::size_t count)
 {
 	std::size_t result (0);
@@ -644,23 +543,20 @@ std::size_t nano::confirm_req::size (nano::block_type type_a, std::size_t count)
 	return result;
 }
 
-std::string nano::confirm_req::to_string () const
+void nano::confirm_req::operator() (nano::object_stream & obs) const
 {
-	std::string s = header.to_string ();
+	nano::message::operator() (obs); // Write common data
 
-	if (header.block_type () == nano::block_type::not_a_block)
-	{
-		for (auto && roots_hash : roots_hashes)
-		{
-			s += "\n" + roots_hash.first.to_string () + ":" + roots_hash.second.to_string ();
-		}
-	}
-	else
-	{
-		s += "\n" + block->to_json ();
-	}
+	obs.write ("block", block);
 
-	return s;
+	// Write roots as: [ { root: ##, hash: ## } ,...]
+	obs.write ("roots", std::views::transform (roots_hashes, [] (auto const & root_hash) {
+		return [&root_hash] (nano::object_stream & obs) {
+			auto [root, hash] = root_hash;
+			obs.write ("root", root);
+			obs.write ("hash", hash);
+		};
+	}));
 }
 
 /*
@@ -710,9 +606,11 @@ std::size_t nano::confirm_ack::size (std::size_t count)
 	return result;
 }
 
-std::string nano::confirm_ack::to_string () const
+void nano::confirm_ack::operator() (nano::object_stream & obs) const
 {
-	return header.to_string () + "\n" + vote->to_json ();
+	nano::message::operator() (obs); // Write common data
+
+	obs.write ("vote", vote);
 }
 
 /*
@@ -769,13 +667,13 @@ bool nano::frontier_req::operator== (nano::frontier_req const & other_a) const
 	return start == other_a.start && age == other_a.age && count == other_a.count;
 }
 
-std::string nano::frontier_req::to_string () const
+void nano::frontier_req::operator() (nano::object_stream & obs) const
 {
-	std::string s = header.to_string ();
-	s += "\nstart=" + start.to_string ();
-	s += " maxage=" + std::to_string (age);
-	s += " count=" + std::to_string (count);
-	return s;
+	nano::message::operator() (obs); // Write common data
+
+	obs.write ("start", start);
+	obs.write ("age", age);
+	obs.write ("count", count);
 }
 
 /*
@@ -878,13 +776,13 @@ void nano::bulk_pull::set_count_present (bool value_a)
 	header.extensions.set (count_present_flag, value_a);
 }
 
-std::string nano::bulk_pull::to_string () const
+void nano::bulk_pull::operator() (nano::object_stream & obs) const
 {
-	std::string s = header.to_string ();
-	s += "\nstart=" + start.to_string ();
-	s += " end=" + end.to_string ();
-	s += " cnt=" + std::to_string (count);
-	return s;
+	nano::message::operator() (obs); // Write common data
+
+	obs.write ("start", start);
+	obs.write ("end", end);
+	obs.write ("count", count);
 }
 
 /*
@@ -936,27 +834,13 @@ bool nano::bulk_pull_account::deserialize (nano::stream & stream_a)
 	return error;
 }
 
-std::string nano::bulk_pull_account::to_string () const
+void nano::bulk_pull_account::operator() (nano::object_stream & obs) const
 {
-	std::string s = header.to_string () + "\n";
-	s += "acc=" + account.to_string ();
-	s += " min=" + minimum_amount.to_string ();
-	switch (flags)
-	{
-		case bulk_pull_account_flags::pending_hash_and_amount:
-			s += " pending_hash_and_amount";
-			break;
-		case bulk_pull_account_flags::pending_address_only:
-			s += " pending_address_only";
-			break;
-		case bulk_pull_account_flags::pending_hash_amount_and_address:
-			s += " pending_hash_amount_and_address";
-			break;
-		default:
-			s += " unknown flags";
-			break;
-	}
-	return s;
+	nano::message::operator() (obs); // Write common data
+
+	obs.write ("account", account);
+	obs.write ("minimum_amount", minimum_amount);
+	obs.write ("flags", static_cast<uint8_t> (flags)); // TODO: Prettier flag printing
 }
 
 /*
@@ -989,6 +873,11 @@ void nano::bulk_push::visit (nano::message_visitor & visitor_a) const
 	visitor_a.bulk_push (*this);
 }
 
+void nano::bulk_push::operator() (nano::object_stream & obs) const
+{
+	nano::message::operator() (obs); // Write common data
+}
+
 /*
  * telemetry_req
  */
@@ -1019,9 +908,9 @@ void nano::telemetry_req::visit (nano::message_visitor & visitor_a) const
 	visitor_a.telemetry_req (*this);
 }
 
-std::string nano::telemetry_req::to_string () const
+void nano::telemetry_req::operator() (nano::object_stream & obs) const
 {
-	return header.to_string ();
+	nano::message::operator() (obs); // Write common data
 }
 
 /*
@@ -1099,18 +988,14 @@ bool nano::telemetry_ack::is_empty_payload () const
 	return size () == 0;
 }
 
-std::string nano::telemetry_ack::to_string () const
+void nano::telemetry_ack::operator() (nano::object_stream & obs) const
 {
-	std::string s = header.to_string () + "\n";
-	if (is_empty_payload ())
+	nano::message::operator() (obs); // Write common data
+
+	if (!is_empty_payload ())
 	{
-		s += "empty telemetry payload";
+		obs.write ("data", data);
 	}
-	else
-	{
-		s += data.to_string ();
-	}
-	return s;
 }
 
 /*
@@ -1308,6 +1193,11 @@ bool nano::telemetry_data::validate_signature () const
 	return nano::validate_message (node_id, bytes.data (), bytes.size (), signature);
 }
 
+void nano::telemetry_data::operator() (nano::object_stream & obs) const
+{
+	// TODO: Implement writing data
+}
+
 /*
  * node_id_handshake
  */
@@ -1425,19 +1315,12 @@ std::size_t nano::node_id_handshake::size (nano::message_header const & header)
 	return result;
 }
 
-std::string nano::node_id_handshake::to_string () const
+void nano::node_id_handshake::operator() (nano::object_stream & obs) const
 {
-	std::string s = header.to_string ();
-	if (query)
-	{
-		s += "\ncookie=" + query->cookie.to_string ();
-	}
-	if (response)
-	{
-		s += "\nresp_node_id=" + response->node_id.to_string ();
-		s += "\nresp_sig=" + response->signature.to_string ();
-	}
-	return s;
+	nano::message::operator() (obs); // Write common data
+
+	obs.write ("query", query);
+	obs.write ("response", response);
 }
 
 /*
@@ -1452,6 +1335,11 @@ void nano::node_id_handshake::query_payload::serialize (nano::stream & stream) c
 void nano::node_id_handshake::query_payload::deserialize (nano::stream & stream)
 {
 	nano::read (stream, cookie);
+}
+
+void nano::node_id_handshake::query_payload::operator() (nano::object_stream & obs) const
+{
+	obs.write ("cookie", cookie);
 }
 
 /*
@@ -1535,6 +1423,19 @@ bool nano::node_id_handshake::response_payload::validate (const nano::uint256_un
 		return false; // Fail
 	}
 	return true; // OK
+}
+
+void nano::node_id_handshake::response_payload::operator() (nano::object_stream & obs) const
+{
+	obs.write ("node_id", node_id);
+	obs.write ("signature", signature);
+
+	obs.write ("v2", v2.has_value ());
+	if (v2)
+	{
+		obs.write ("salt", v2->salt);
+		obs.write ("genesis", v2->genesis);
+	}
 }
 
 /*
@@ -1655,6 +1556,16 @@ bool nano::asc_pull_req::verify_consistency () const
 	return true; // Just for convenience of calling from asserts
 }
 
+void nano::asc_pull_req::operator() (nano::object_stream & obs) const
+{
+	nano::message::operator() (obs); // Write common data
+
+	obs.write ("type", type);
+	obs.write ("id", id);
+
+	std::visit ([&obs] (auto && pld) { pld (obs); }, payload); // Log payload
+}
+
 /*
  * asc_pull_req::blocks_payload
  */
@@ -1673,6 +1584,13 @@ void nano::asc_pull_req::blocks_payload::deserialize (nano::stream & stream)
 	nano::read (stream, start_type);
 }
 
+void nano::asc_pull_req::blocks_payload::operator() (nano::object_stream & obs) const
+{
+	obs.write ("start", start);
+	obs.write ("start_type", start_type);
+	obs.write ("count", count);
+}
+
 /*
  * asc_pull_req::account_info_payload
  */
@@ -1687,6 +1605,12 @@ void nano::asc_pull_req::account_info_payload::deserialize (stream & stream)
 {
 	nano::read (stream, target);
 	nano::read (stream, target_type);
+}
+
+void nano::asc_pull_req::account_info_payload::operator() (nano::object_stream & obs) const
+{
+	obs.write ("target", target);
+	obs.write ("target_type", target_type);
 }
 
 /*
@@ -1808,6 +1732,16 @@ bool nano::asc_pull_ack::verify_consistency () const
 	return true; // Just for convenience of calling from asserts
 }
 
+void nano::asc_pull_ack::operator() (nano::object_stream & obs) const
+{
+	nano::message::operator() (obs); // Write common data
+
+	obs.write ("type", type);
+	obs.write ("id", id);
+
+	std::visit ([&obs] (auto && pld) { pld (obs); }, payload); // Log payload
+}
+
 /*
  * asc_pull_ack::blocks_payload
  */
@@ -1834,6 +1768,11 @@ void nano::asc_pull_ack::blocks_payload::deserialize (nano::stream & stream)
 	}
 }
 
+void nano::asc_pull_ack::blocks_payload::operator() (nano::object_stream & obs) const
+{
+	obs.write ("blocks", blocks);
+}
+
 /*
  * asc_pull_ack::account_info_payload
  */
@@ -1841,19 +1780,113 @@ void nano::asc_pull_ack::blocks_payload::deserialize (nano::stream & stream)
 void nano::asc_pull_ack::account_info_payload::serialize (nano::stream & stream) const
 {
 	nano::write (stream, account);
-	nano::write (stream, account_open);
-	nano::write (stream, account_head);
-	nano::write_big_endian (stream, account_block_count);
-	nano::write (stream, account_conf_frontier);
-	nano::write_big_endian (stream, account_conf_height);
+	nano::write (stream, open);
+	nano::write (stream, head);
+	nano::write_big_endian (stream, block_count);
+	nano::write (stream, conf_frontier);
+	nano::write_big_endian (stream, conf_height);
 }
 
 void nano::asc_pull_ack::account_info_payload::deserialize (nano::stream & stream)
 {
 	nano::read (stream, account);
-	nano::read (stream, account_open);
-	nano::read (stream, account_head);
-	nano::read_big_endian (stream, account_block_count);
-	nano::read (stream, account_conf_frontier);
-	nano::read_big_endian (stream, account_conf_height);
+	nano::read (stream, open);
+	nano::read (stream, head);
+	nano::read_big_endian (stream, block_count);
+	nano::read (stream, conf_frontier);
+	nano::read_big_endian (stream, conf_height);
+}
+
+void nano::asc_pull_ack::account_info_payload::operator() (nano::object_stream & obs) const
+{
+	obs.write ("account", account);
+	obs.write ("open", open);
+	obs.write ("head", head);
+	obs.write ("block_count", block_count);
+	obs.write ("conf_frontier", conf_frontier);
+	obs.write ("conf_height", conf_height);
+}
+
+/*
+ *
+ */
+
+std::string_view nano::to_string (nano::message_type type)
+{
+	switch (type)
+	{
+		case nano::message_type::invalid:
+			return "invalid";
+		case nano::message_type::not_a_type:
+			return "not_a_type";
+		case nano::message_type::keepalive:
+			return "keepalive";
+		case nano::message_type::publish:
+			return "publish";
+		case nano::message_type::confirm_req:
+			return "confirm_req";
+		case nano::message_type::confirm_ack:
+			return "confirm_ack";
+		case nano::message_type::bulk_pull:
+			return "bulk_pull";
+		case nano::message_type::bulk_push:
+			return "bulk_push";
+		case nano::message_type::frontier_req:
+			return "frontier_req";
+		case nano::message_type::node_id_handshake:
+			return "node_id_handshake";
+		case nano::message_type::bulk_pull_account:
+			return "bulk_pull_account";
+		case nano::message_type::telemetry_req:
+			return "telemetry_req";
+		case nano::message_type::telemetry_ack:
+			return "telemetry_ack";
+		case nano::message_type::asc_pull_req:
+			return "asc_pull_req";
+		case nano::message_type::asc_pull_ack:
+			return "asc_pull_ack";
+			// default case intentionally omitted to cause warnings for unhandled enums
+	}
+
+	return "n/a";
+}
+
+nano::stat::detail nano::to_stat_detail (nano::message_type type)
+{
+	switch (type)
+	{
+		case nano::message_type::invalid:
+			return nano::stat::detail::invalid;
+		case nano::message_type::not_a_type:
+			return nano::stat::detail::not_a_type;
+		case nano::message_type::keepalive:
+			return nano::stat::detail::keepalive;
+		case nano::message_type::publish:
+			return nano::stat::detail::publish;
+		case nano::message_type::confirm_req:
+			return nano::stat::detail::confirm_req;
+		case nano::message_type::confirm_ack:
+			return nano::stat::detail::confirm_ack;
+		case nano::message_type::bulk_pull:
+			return nano::stat::detail::bulk_pull;
+		case nano::message_type::bulk_push:
+			return nano::stat::detail::bulk_push;
+		case nano::message_type::frontier_req:
+			return nano::stat::detail::frontier_req;
+		case nano::message_type::node_id_handshake:
+			return nano::stat::detail::node_id_handshake;
+		case nano::message_type::bulk_pull_account:
+			return nano::stat::detail::bulk_pull_account;
+		case nano::message_type::telemetry_req:
+			return nano::stat::detail::telemetry_req;
+		case nano::message_type::telemetry_ack:
+			return nano::stat::detail::telemetry_ack;
+		case nano::message_type::asc_pull_req:
+			return nano::stat::detail::asc_pull_req;
+		case nano::message_type::asc_pull_ack:
+			return nano::stat::detail::asc_pull_ack;
+			// default case intentionally omitted to cause warnings for unhandled enums
+	}
+	debug_assert (false);
+	return {};
 }

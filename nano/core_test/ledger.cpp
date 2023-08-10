@@ -1,3 +1,4 @@
+#include <nano/lib/logging.hpp>
 #include <nano/lib/stats.hpp>
 #include <nano/lib/threading.hpp>
 #include <nano/node/election.hpp>
@@ -816,7 +817,7 @@ TEST (ledger, representation)
 
 TEST (ledger, double_open)
 {
-	nano::logger_mt logger;
+	nano::nlogger logger;
 	auto store = nano::make_store (logger, nano::unique_path (), nano::dev::constants);
 	ASSERT_TRUE (!store->init_error ());
 	nano::stats stats;
@@ -4113,7 +4114,7 @@ TEST (ledger, block_hash_account_conflict)
 
 TEST (ledger, could_fit)
 {
-	nano::logger_mt logger;
+	nano::nlogger logger;
 	auto store = nano::make_store (logger, nano::unique_path (), nano::dev::constants);
 	ASSERT_TRUE (!store->init_error ());
 	nano::stats stats;
@@ -4751,7 +4752,7 @@ TEST (ledger, dependents_confirmed)
 
 TEST (ledger, dependents_confirmed_pruning)
 {
-	nano::logger_mt logger;
+	nano::nlogger logger;
 	auto store = nano::make_store (logger, nano::unique_path (), nano::dev::constants);
 	ASSERT_FALSE (store->init_error ());
 	nano::stats stats;
@@ -4941,7 +4942,7 @@ TEST (ledger, cache)
 
 TEST (ledger, pruning_action)
 {
-	nano::logger_mt logger;
+	nano::nlogger logger;
 	auto store = nano::make_store (logger, nano::unique_path (), nano::dev::constants);
 	ASSERT_TRUE (!store->init_error ());
 	nano::stats stats;
@@ -5025,7 +5026,7 @@ TEST (ledger, pruning_action)
 
 TEST (ledger, pruning_large_chain)
 {
-	nano::logger_mt logger;
+	nano::nlogger logger;
 	auto store = nano::make_store (logger, nano::unique_path (), nano::dev::constants);
 	ASSERT_TRUE (!store->init_error ());
 	nano::stats stats;
@@ -5080,7 +5081,7 @@ TEST (ledger, pruning_large_chain)
 
 TEST (ledger, pruning_source_rollback)
 {
-	nano::logger_mt logger;
+	nano::nlogger logger;
 	auto store = nano::make_store (logger, nano::unique_path (), nano::dev::constants);
 	ASSERT_TRUE (!store->init_error ());
 	nano::stats stats;
@@ -5168,7 +5169,7 @@ TEST (ledger, pruning_source_rollback)
 
 TEST (ledger, pruning_source_rollback_legacy)
 {
-	nano::logger_mt logger;
+	nano::nlogger logger;
 	auto store = nano::make_store (logger, nano::unique_path (), nano::dev::constants);
 	ASSERT_TRUE (!store->init_error ());
 	nano::stats stats;
@@ -5281,7 +5282,7 @@ TEST (ledger, pruning_source_rollback_legacy)
 
 TEST (ledger, pruning_process_error)
 {
-	nano::logger_mt logger;
+	nano::nlogger logger;
 	auto store = nano::make_store (logger, nano::unique_path (), nano::dev::constants);
 	ASSERT_TRUE (!store->init_error ());
 	nano::stats stats;
@@ -5328,7 +5329,7 @@ TEST (ledger, pruning_process_error)
 
 TEST (ledger, pruning_legacy_blocks)
 {
-	nano::logger_mt logger;
+	nano::nlogger logger;
 	auto store = nano::make_store (logger, nano::unique_path (), nano::dev::constants);
 	ASSERT_TRUE (!store->init_error ());
 	nano::stats stats;
@@ -5414,7 +5415,7 @@ TEST (ledger, pruning_legacy_blocks)
 
 TEST (ledger, pruning_safe_functions)
 {
-	nano::logger_mt logger;
+	nano::nlogger logger;
 	auto store = nano::make_store (logger, nano::unique_path (), nano::dev::constants);
 	ASSERT_TRUE (!store->init_error ());
 	nano::stats stats;
@@ -5475,7 +5476,7 @@ TEST (ledger, pruning_safe_functions)
 
 TEST (ledger, hash_root_random)
 {
-	nano::logger_mt logger;
+	nano::nlogger logger;
 	auto store = nano::make_store (logger, nano::unique_path (), nano::dev::constants);
 	ASSERT_TRUE (!store->init_error ());
 	nano::stats stats;
@@ -5539,7 +5540,7 @@ TEST (ledger, migrate_lmdb_to_rocksdb)
 {
 	nano::test::system system{};
 	auto path = nano::unique_path ();
-	nano::logger_mt logger{};
+	nano::nlogger logger;
 	boost::asio::ip::address_v6 address (boost::asio::ip::make_address_v6 ("::ffff:127.0.0.1"));
 	uint16_t port = 100;
 	nano::lmdb::store store{ logger, path / "data.ldb", nano::dev::constants };

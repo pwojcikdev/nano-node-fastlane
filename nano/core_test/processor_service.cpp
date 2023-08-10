@@ -1,3 +1,4 @@
+#include <nano/lib/logging.hpp>
 #include <nano/lib/stats.hpp>
 #include <nano/lib/work.hpp>
 #include <nano/secure/ledger.hpp>
@@ -9,7 +10,7 @@
 
 TEST (processor_service, bad_send_signature)
 {
-	nano::logger_mt logger;
+	nano::nlogger logger;
 	auto store = nano::make_store (logger, nano::unique_path (), nano::dev::constants);
 	ASSERT_FALSE (store->init_error ());
 	nano::stats stats;
@@ -35,7 +36,7 @@ TEST (processor_service, bad_send_signature)
 
 TEST (processor_service, bad_receive_signature)
 {
-	nano::logger_mt logger;
+	nano::nlogger logger;
 	auto store = nano::make_store (logger, nano::unique_path (), nano::dev::constants);
 	ASSERT_FALSE (store->init_error ());
 	nano::stats stats;
