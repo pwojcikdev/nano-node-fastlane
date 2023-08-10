@@ -2,6 +2,7 @@
 #include <nano/lib/config.hpp>
 #include <nano/lib/numbers.hpp>
 #include <nano/lib/timer.hpp>
+#include <nano/lib/utility.hpp>
 #include <nano/secure/common.hpp>
 #include <nano/store/component.hpp>
 
@@ -515,13 +516,9 @@ nano::vote::vote (nano::account const & account_a, nano::raw_key const & prv_a, 
 
 std::string nano::vote::hashes_string () const
 {
-	std::string result;
-	for (auto const & hash : hashes)
-	{
-		result += hash.to_string ();
-		result += ", ";
-	}
-	return result;
+	return nano::util::join (hashes, ",", [] (auto const & hash) {
+		return hash.to_string ();
+	});
 }
 
 std::string const nano::vote::hash_prefix = "vote ";
@@ -603,6 +600,13 @@ uint64_t nano::vote::packed_timestamp (uint64_t timestamp, uint8_t duration) con
 	debug_assert (duration <= duration_max && "Invalid duration");
 	debug_assert ((!(timestamp == timestamp_max) || (duration == duration_max)) && "Invalid final vote");
 	return (timestamp & timestamp_mask) | duration;
+}
+
+void nano::vote::operator() (nano::object_stream & obs) const
+{
+	obs.write ("account", account);
+	obs.write ("timestamp", timestamp_m);
+	obs.write ("hashes", hashes);
 }
 
 nano::block_hash nano::iterate_vote_blocks_as_hash::operator() (nano::block_hash const & item) const
