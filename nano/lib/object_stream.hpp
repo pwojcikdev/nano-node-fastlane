@@ -16,7 +16,7 @@ struct object_stream_config
 {
 	std::string_view field_begin{ "" };
 	std::string_view field_end{ "" };
-	std::string_view field_assignment{ "=" };
+	std::string_view field_assignment{ ": " };
 	std::string_view field_separator{ ", " };
 
 	std::string_view object_begin{ "{ " };
