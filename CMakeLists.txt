@@ -149,6 +149,7 @@ endif()
 option(NANO_ASAN_INT "Enable ASan+UBSan+Integer overflow" OFF)
 option(NANO_ASAN "Enable ASan+UBSan" OFF)
 option(NANO_TSAN "Enable TSan" OFF)
+
 option(NANO_SIMD_OPTIMIZATIONS
        "Enable CPU-specific SIMD optimizations (SSE/AVX or NEON, e.g.)" OFF)
 option(
