@@ -1,5 +1,6 @@
 #pragma once
 
+#include <nano/lib/id_dispenser.hpp>
 #include <nano/lib/logging.hpp>
 #include <nano/secure/common.hpp>
 #include <nano/secure/ledger.hpp>
@@ -76,6 +77,8 @@ struct election_extended_status final
 
 class election final : public std::enable_shared_from_this<nano::election>
 {
+	nano::id_dispenser::id_t id;
+
 public:
 	enum class vote_source
 	{

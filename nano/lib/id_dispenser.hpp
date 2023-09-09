@@ -59,4 +59,10 @@ private:
 		return dist;
 	}
 };
+
+inline id_dispenser & id_gen ()
+{
+	static id_dispenser id_gen;
+	return id_gen;
+}
 }

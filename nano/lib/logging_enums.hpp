@@ -37,7 +37,9 @@ enum class tag
 	election,
 	blockprocessor,
 	network,
+	network_processed,
 	channel,
+	channel_sent,
 	socket,
 	socket_server,
 	tcp,
@@ -55,6 +57,10 @@ enum class tag
 	txn_tracker,
 	gap_cache,
 	vote_processor,
+	election_scheduler,
+	vote_generator,
+
+	// bootstrap
 	bulk_pull_client,
 	bulk_pull_server,
 	bulk_pull_account_client,
@@ -89,6 +95,7 @@ enum class detail
 	// election
 	election_confirmed,
 	election_expired,
+	broadcast_vote,
 
 	// blockprocessor
 	block_processed,
@@ -97,9 +104,15 @@ enum class detail
 	vote_processed,
 
 	// network
-	message_received,
+	message_processed,
 	message_sent,
 	message_dropped,
+
+	// election_scheduler
+	block_activated,
+
+	// vote_generator
+	candidate_processed,
 
 	// bulk pull/push
 	pulled_block,
@@ -108,6 +121,24 @@ enum class detail
 	sending_frontier,
 	requesting_account_or_head,
 	requesting_pending,
+
+	// message types
+	not_a_type,
+	invalid,
+	keepalive,
+	publish,
+	republish_vote,
+	confirm_req,
+	confirm_ack,
+	node_id_handshake,
+	telemetry_req,
+	telemetry_ack,
+	asc_pull_req,
+	asc_pull_ack,
+	bulk_pull,
+	bulk_push,
+	frontier_req,
+	bulk_pull_account,
 
 };
 
