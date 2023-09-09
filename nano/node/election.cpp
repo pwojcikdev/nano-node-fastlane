@@ -18,7 +18,13 @@ nano::election_vote_result::election_vote_result (bool replay_a, bool processed_
 	processed = processed_a;
 }
 
+namespace
+{
+std::atomic<uint64_t> id_dispenser{ 0x1000000000000000 };
+}
+
 nano::election::election (nano::node & node_a, std::shared_ptr<nano::block> const & block_a, std::function<void (std::shared_ptr<nano::block> const &)> const & confirmation_action_a, std::function<void (nano::account const &)> const & live_vote_action_a, nano::election_behavior election_behavior_a) :
+	id{ reinterpret_cast<void *> (id_dispenser.fetch_add (1)) },
 	confirmation_action (confirmation_action_a),
 	live_vote_action (live_vote_action_a),
 	node (node_a),
@@ -483,16 +489,28 @@ void nano::election::broadcast_vote_impl ()
 
 	if (node.config.enable_voting && node.wallets.reps ().voting > 0)
 	{
-		node.stats.inc (nano::stat::type::election, nano::stat::detail::generate_vote);
+		node.stats.inc (nano::stat::type::election, nano::stat::detail::broadcast_vote);
 
 		if (confirmed () || have_quorum (tally_impl ()))
 		{
-			node.stats.inc (nano::stat::type::election, nano::stat::detail::generate_vote_final);
+			node.stats.inc (nano::stat::type::election, nano::stat::detail::broadcast_vote_final);
+			node.nlogger.trace (nano::log::tag::election, nano::log::detail::broadcast_vote,
+			nano::nlogger::arg{ "id", id },
+			nano::nlogger::arg{ "root", qualified_root },
+			nano::nlogger::arg{ "winner", status.winner },
+			nano::nlogger::arg{ "type", "final" });
+
 			node.final_generator.add (root, status.winner->hash ()); // Broadcasts vote to the network
 		}
 		else
 		{
-			node.stats.inc (nano::stat::type::election, nano::stat::detail::generate_vote_normal);
+			node.stats.inc (nano::stat::type::election, nano::stat::detail::broadcast_vote_normal);
+			node.nlogger.trace (nano::log::tag::election, nano::log::detail::broadcast_vote,
+			nano::nlogger::arg{ "id", id },
+			nano::nlogger::arg{ "root", qualified_root },
+			nano::nlogger::arg{ "winner", status.winner },
+			nano::nlogger::arg{ "type", "normal" });
+
 			node.generator.add (root, status.winner->hash ()); // Broadcasts vote to the network
 		}
 	}
@@ -663,6 +681,8 @@ void nano::election::operator() (nano::object_stream & obs) const
 	nano::lock_guard<nano::mutex> guard{ mutex };
 
 	// TODO: Remove the need for .to_string () calls
+	obs.write ("id", id);
+
 	obs.write ("root", qualified_root.to_string ());
 	obs.write ("behaviour", behavior_m);
 	obs.write ("state", state_m.load ());
