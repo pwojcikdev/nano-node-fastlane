@@ -5,6 +5,7 @@
 #include <nano/lib/config.hpp>
 #include <nano/lib/errors.hpp>
 #include <nano/lib/jsonconfig.hpp>
+#include <nano/lib/logging.hpp>
 #include <nano/lib/memory.hpp>
 #include <nano/lib/numbers.hpp>
 #include <nano/lib/object_stream.hpp>
@@ -48,6 +49,7 @@ enum class message_type : uint8_t
 
 std::string_view to_string (nano::message_type);
 stat::detail to_stat_detail (nano::message_type);
+log::detail to_log_detail (nano::message_type);
 
 enum class bulk_pull_account_flags : uint8_t
 {
