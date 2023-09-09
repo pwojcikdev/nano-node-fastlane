@@ -23,18 +23,20 @@ void nano::transport::channel::send (nano::message & message_a, std::function<vo
 	if (!is_droppable_by_limiter || should_pass)
 	{
 		node.stats.inc (nano::stat::type::message, detail, nano::stat::dir::out);
-		node.nlogger.trace (nano::log::tag::channel, nano::log::detail::message_sent,
+		node.nlogger.trace (nano::log::tag::channel_sent, nano::to_log_detail (message_a.type ()),
 		nano::nlogger::arg{ "message", message_a },
-		nano::nlogger::arg{ "channel", *this });
+		nano::nlogger::arg{ "channel", *this },
+		nano::nlogger::arg{ "dropped", false });
 
 		send_buffer (buffer, callback_a, drop_policy_a, traffic_type);
 	}
 	else
 	{
 		node.stats.inc (nano::stat::type::drop, detail, nano::stat::dir::out);
-		node.nlogger.trace (nano::log::tag::channel, nano::log::detail::message_dropped,
+		node.nlogger.trace (nano::log::tag::channel_sent, nano::to_log_detail (message_a.type ()),
 		nano::nlogger::arg{ "message", message_a },
-		nano::nlogger::arg{ "channel", *this });
+		nano::nlogger::arg{ "channel", *this },
+		nano::nlogger::arg{ "dropped", true });
 
 		if (callback_a)
 		{

@@ -76,6 +76,8 @@ struct election_extended_status final
 
 class election final : public std::enable_shared_from_this<nano::election>
 {
+	void * id;
+
 public:
 	enum class vote_source
 	{

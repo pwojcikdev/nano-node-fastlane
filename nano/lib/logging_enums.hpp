@@ -37,7 +37,9 @@ enum class tag
 	election,
 	blockprocessor,
 	network,
+	network_processed,
 	channel,
+	channel_sent,
 	socket,
 	socket_server,
 	tcp,
@@ -89,6 +91,7 @@ enum class detail
 	// election
 	election_confirmed,
 	election_expired,
+	broadcast_vote,
 
 	// blockprocessor
 	block_processed,
@@ -97,7 +100,7 @@ enum class detail
 	vote_processed,
 
 	// network
-	message_received,
+	message_processed,
 	message_sent,
 	message_dropped,
 
@@ -108,6 +111,24 @@ enum class detail
 	sending_frontier,
 	requesting_account_or_head,
 	requesting_pending,
+
+	// message types
+	not_a_type,
+	invalid,
+	keepalive,
+	publish,
+	republish_vote,
+	confirm_req,
+	confirm_ack,
+	node_id_handshake,
+	telemetry_req,
+	telemetry_ack,
+	asc_pull_req,
+	asc_pull_ack,
+	bulk_pull,
+	bulk_push,
+	frontier_req,
+	bulk_pull_account,
 
 };
 
