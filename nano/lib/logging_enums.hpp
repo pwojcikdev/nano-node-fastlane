@@ -57,6 +57,10 @@ enum class tag
 	txn_tracker,
 	gap_cache,
 	vote_processor,
+	election_scheduler,
+	vote_generator,
+
+	// bootstrap
 	bulk_pull_client,
 	bulk_pull_server,
 	bulk_pull_account_client,
@@ -103,6 +107,12 @@ enum class detail
 	message_processed,
 	message_sent,
 	message_dropped,
+
+	// election_scheduler
+	block_activated,
+
+	// vote_generator
+	candidate_processed,
 
 	// bulk pull/push
 	pulled_block,

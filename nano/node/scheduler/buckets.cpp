@@ -56,12 +56,21 @@ bool nano::scheduler::buckets::activate (nano::account const & account_a, nano::
 			debug_assert (block != nullptr);
 			if (node.ledger.dependents_confirmed (transaction, *block))
 			{
-				stats.inc (nano::stat::type::election_scheduler, nano::stat::detail::activated);
 				auto balance = node.ledger.balance (transaction, hash);
 				auto previous_balance = node.ledger.balance (transaction, conf_info.frontier);
+				auto balance_priority = std::max (balance, previous_balance);
+
+				node.stats.inc (nano::stat::type::election_scheduler, nano::stat::detail::activated);
+				node.nlogger.trace (nano::log::tag::election_scheduler, nano::log::detail::block_activated,
+				nano::nlogger::arg{ "account", account_a.to_account () },
+				nano::nlogger::arg{ "block", block },
+				nano::nlogger::arg{ "time", info->modified },
+				nano::nlogger::arg{ "priority", balance_priority });
+
 				nano::lock_guard<nano::mutex> lock{ mutex };
-				priority.push (info->modified, block, std::max (balance, previous_balance));
+				priority.push (info->modified, block, balance_priority);
 				notify ();
+
 				return true; // Activated
 			}
 		}
