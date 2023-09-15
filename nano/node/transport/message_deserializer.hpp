@@ -80,7 +80,7 @@ namespace transport
 		std::shared_ptr<std::vector<uint8_t>> read_buffer;
 
 	private: // Constants
-		static constexpr std::size_t HEADER_SIZE = 8;
+		static constexpr std::size_t HEADER_SIZE = nano::message_header::size;
 		static constexpr std::size_t MAX_MESSAGE_SIZE = 1024 * 65;
 
 	private: // Dependencies
