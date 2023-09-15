@@ -30,12 +30,15 @@
  * message_header
  */
 
+nano::id_dispenser nano::message_header::id_gen{};
+
 nano::message_header::message_header (nano::network_constants const & constants, nano::message_type type_a) :
 	network{ constants.current_network },
 	version_max{ constants.protocol_version },
 	version_using{ constants.protocol_version },
 	version_min{ constants.protocol_version_min },
-	type (type_a)
+	type (type_a),
+	id{ id_gen.next_id () }
 {
 }
 
@@ -55,6 +58,7 @@ void nano::message_header::serialize (nano::stream & stream_a) const
 	nano::write (stream_a, version_min);
 	nano::write (stream_a, type);
 	nano::write (stream_a, static_cast<uint16_t> (extensions.to_ullong ()));
+	nano::write (stream_a, id);
 }
 
 bool nano::message_header::deserialize (nano::stream & stream_a)
@@ -72,6 +76,7 @@ bool nano::message_header::deserialize (nano::stream & stream_a)
 		uint16_t extensions_l;
 		nano::read (stream_a, extensions_l);
 		extensions = extensions_l;
+		nano::read (stream_a, id);
 	}
 	catch (std::runtime_error const &)
 	{
@@ -248,6 +253,7 @@ void nano::message_header::operator() (nano::object_stream & obs) const
 	obs.write ("version_min", static_cast<uint16_t> (version_min));
 	obs.write ("version_max", static_cast<uint16_t> (version_max));
 	obs.write ("extensions", static_cast<uint16_t> (extensions.to_ulong ()));
+	obs.write ("id", id);
 }
 
 /*
