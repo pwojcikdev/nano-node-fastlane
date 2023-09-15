@@ -4,6 +4,7 @@
 #include <nano/lib/blocks.hpp>
 #include <nano/lib/config.hpp>
 #include <nano/lib/errors.hpp>
+#include <nano/lib/id_dispenser.hpp>
 #include <nano/lib/jsonconfig.hpp>
 #include <nano/lib/logging.hpp>
 #include <nano/lib/memory.hpp>
@@ -72,16 +73,22 @@ public:
 	uint8_t count_get () const;
 	void count_set (uint8_t);
 
+public:
 	nano::networks network;
 	uint8_t version_max;
 	uint8_t version_using;
 	uint8_t version_min;
-
-public:
 	nano::message_type type;
 	std::bitset<16> extensions;
-	static std::size_t constexpr size = sizeof (nano::networks) + sizeof (version_max) + sizeof (version_using) + sizeof (version_min) + sizeof (type) + sizeof (/* extensions */ uint16_t);
+	nano::id_dispenser::id_t id;
 
+#if NANO_MESSAGE_IDS
+	static std::size_t constexpr size = sizeof (nano::networks) + sizeof (version_max) + sizeof (version_using) + sizeof (version_min) + sizeof (type) + sizeof (/* extensions */ uint16_t) + sizeof (id);
+#else
+	static std::size_t constexpr size = sizeof (nano::networks) + sizeof (version_max) + sizeof (version_using) + sizeof (version_min) + sizeof (type) + sizeof (/* extensions */ uint16_t);
+#endif
+
+public:
 	void flag_set (uint8_t, bool enable = true);
 	static uint8_t constexpr bulk_pull_count_present_flag = 0;
 	static uint8_t constexpr bulk_pull_ascending_flag = 1;
