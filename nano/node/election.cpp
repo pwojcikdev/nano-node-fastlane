@@ -18,13 +18,14 @@ nano::election_vote_result::election_vote_result (bool replay_a, bool processed_
 	processed = processed_a;
 }
 
-namespace
-{
-std::atomic<uint64_t> id_dispenser{ 0x1000000000000000 };
-}
+/*
+ * election
+ */
+
+nano::id_dispenser nano::election::id_gen{};
 
 nano::election::election (nano::node & node_a, std::shared_ptr<nano::block> const & block_a, std::function<void (std::shared_ptr<nano::block> const &)> const & confirmation_action_a, std::function<void (nano::account const &)> const & live_vote_action_a, nano::election_behavior election_behavior_a) :
-	id{ reinterpret_cast<void *> (id_dispenser.fetch_add (1)) },
+	id{ id_gen.next_id () },
 	confirmation_action (confirmation_action_a),
 	live_vote_action (live_vote_action_a),
 	node (node_a),
