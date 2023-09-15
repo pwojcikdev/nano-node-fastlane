@@ -4,6 +4,7 @@
 #include <nano/lib/blocks.hpp>
 #include <nano/lib/config.hpp>
 #include <nano/lib/errors.hpp>
+#include <nano/lib/id_dispenser.hpp>
 #include <nano/lib/jsonconfig.hpp>
 #include <nano/lib/logging.hpp>
 #include <nano/lib/memory.hpp>
@@ -80,9 +81,14 @@ public: // Payload
 	uint8_t version_min;
 	nano::message_type type;
 	extensions_bitset_t extensions;
+	nano::id_dispenser::id_t id;
 
 public:
+#if NANO_MESSAGE_IDS
+	static std::size_t constexpr size = sizeof (nano::networks) + sizeof (version_max) + sizeof (version_using) + sizeof (version_min) + sizeof (type) + sizeof (/* extensions */ uint16_t) + sizeof (id);
+#else
 	static std::size_t constexpr size = sizeof (nano::networks) + sizeof (version_max) + sizeof (version_using) + sizeof (version_min) + sizeof (type) + sizeof (/* extensions */ uint16_t);
+#endif
 
 	bool flag_test (uint8_t flag) const;
 	void flag_set (uint8_t flag, bool enable = true);
