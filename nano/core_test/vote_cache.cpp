@@ -79,8 +79,8 @@ TEST (vote_cache, insert_one_hash)
 	ASSERT_TRUE (peek1);
 	ASSERT_EQ (peek1->hash, hash1);
 	ASSERT_EQ (peek1->voters.size (), 1);
-	ASSERT_EQ (peek1->voters.front ().first, rep1.pub); // account
-	ASSERT_EQ (peek1->voters.front ().second, 1024 * 1024); // timestamp
+	ASSERT_EQ (peek1->voters.front ().representative, rep1.pub); // account
+	ASSERT_EQ (peek1->voters.front ().timestamp, 1024 * 1024); // timestamp
 	ASSERT_EQ (peek1->tally, 7);
 }
 
@@ -214,8 +214,8 @@ TEST (vote_cache, insert_newer)
 	ASSERT_EQ (1, vote_cache.cache_size ());
 	ASSERT_EQ (1, peek2->voters.size ());
 	// Second entry should have timestamp greater than the first one
-	ASSERT_GT (peek2->voters.front ().second, peek1->voters.front ().second);
-	ASSERT_EQ (peek2->voters.front ().second, std::numeric_limits<uint64_t>::max ()); // final timestamp
+	ASSERT_GT (peek2->voters.front ().timestamp, peek1->voters.front ().timestamp);
+	ASSERT_EQ (peek2->voters.front ().timestamp, std::numeric_limits<uint64_t>::max ()); // final timestamp
 }
 
 /*
@@ -237,7 +237,7 @@ TEST (vote_cache, insert_older)
 	ASSERT_TRUE (peek2);
 	ASSERT_EQ (1, vote_cache.cache_size ());
 	ASSERT_EQ (1, peek2->voters.size ());
-	ASSERT_EQ (peek2->voters.front ().second, peek1->voters.front ().second); // timestamp2 == timestamp1
+	ASSERT_EQ (peek2->voters.front ().timestamp, peek1->voters.front ().timestamp); // timestamp2 == timestamp1
 }
 
 /*

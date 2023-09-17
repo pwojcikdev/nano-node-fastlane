@@ -51,13 +51,23 @@ public:
 	class entry final
 	{
 	public:
-		constexpr static int max_voters = 40;
+		struct voter_entry
+		{
+			nano::account representative;
+			uint64_t timestamp;
+			nano::uint128_t weight;
+		};
+
+	public:
+		constexpr static int max_voters = 80;
 
 		explicit entry (nano::block_hash const & hash);
 
 		nano::block_hash hash;
-		std::vector<std::pair<nano::account, uint64_t>> voters; // <rep, timestamp> pair
+		std::vector<voter_entry> voters; // <rep, timestamp> pair
+
 		nano::uint128_t tally{ 0 };
+		nano::uint128_t final_tally{ 0 };
 
 		/**
 		 * Adds a vote into a list, checks for duplicates and updates timestamp if new one is greater
@@ -72,6 +82,9 @@ public:
 		 * Size of this entry
 		 */
 		std::size_t size () const;
+
+	private:
+		void recalculate_tally ();
 	};
 
 private:
