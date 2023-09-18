@@ -111,6 +111,7 @@ bool nano::scheduler::hinted::activate (const nano::transaction & transaction, c
 		if (check_dependents && !node.ledger.dependents_confirmed (transaction, *block))
 		{
 			stats.inc (nano::stat::type::hinting, nano::stat::detail::dependent_unconfirmed);
+			activate_dependents (transaction, *block);
 			return false;
 		}
 
@@ -130,6 +131,22 @@ bool nano::scheduler::hinted::activate (const nano::transaction & transaction, c
 	return false;
 }
 
+void nano::scheduler::hinted::activate_dependents (const nano::transaction & transaction, const nano::block & block)
+{
+	auto dependents = node.ledger.dependent_blocks (transaction, block);
+	for (auto const & hash : dependents)
+	{
+		if (!hash.is_zero ())
+		{
+			bool activated = activate (transaction, hash, /* check dependents */ true);
+			if (activated)
+			{
+				stats.inc (nano::stat::type::hinting, nano::stat::detail::dependent_activated);
+			}
+		}
+	}
+}
+
 void nano::scheduler::hinted::run_iterative ()
 {
 	const auto minimum_tally = tally_threshold ();
@@ -143,10 +160,15 @@ void nano::scheduler::hinted::run_iterative ()
 		//			return;
 		//		}
 
+		if (!predicate (0))
+		{
+			return;
+		}
+
 		if (entry.final_tally >= minimum_final_tally)
 		{
 			stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_final);
-			activate (transaction, entry.hash);
+			activate (transaction, entry.hash, /* activate regardless of dependents */ false);
 			return;
 		}
 		if (entry.tally >= minimum_tally)
