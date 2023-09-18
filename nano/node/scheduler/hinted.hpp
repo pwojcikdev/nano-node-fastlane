@@ -47,7 +47,11 @@ private:
 	void run ();
 	bool run_one (nano::uint128_t const & minimum_tally);
 
+	void run_iterative ();
+	bool activate (nano::transaction const &, nano::block_hash const & hash, bool check_dependents = false);
+
 	nano::uint128_t tally_threshold () const;
+	nano::uint128_t final_tally_threshold () const;
 
 private: // Dependencies
 	nano::node & node;

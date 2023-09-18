@@ -79,6 +79,19 @@ void nano::vote_cache::entry::recalculate_tally ()
 	}
 }
 
+bool nano::vote_cache::entry::cooldown (std::chrono::milliseconds cooldown_time) const
+{
+	if (last_cooldown + cooldown_time < std::chrono::steady_clock::now ())
+	{
+		last_cooldown = std::chrono::steady_clock::now ();
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
 /*
  * vote_cache
  */
@@ -105,17 +118,22 @@ void nano::vote_cache::vote_impl (const nano::block_hash & hash, const nano::acc
 	auto & cache_by_hash = cache.get<tag_hash> ();
 	if (auto existing = cache_by_hash.find (hash); existing != cache_by_hash.end ())
 	{
-		bool success = cache_by_hash.modify (existing, [&representative, &timestamp, &rep_weight] (entry & ent) {
-			ent.vote (representative, timestamp, rep_weight);
+		bool modified = false;
+		bool success = cache_by_hash.modify (existing, [&representative, &timestamp, &rep_weight, &modified] (entry & ent) {
+			modified = ent.vote (representative, timestamp, rep_weight);
 		});
 		release_assert (success); // Ensure iterator `existing` is valid
 
-		auto & queue_by_hash = queue.get<tag_hash> ();
-		if (auto queue_existing = queue_by_hash.find (hash); queue_existing != queue_by_hash.end ())
+		if (modified)
 		{
-			queue_by_hash.modify (queue_existing, [&existing] (queue_entry & ent) {
-				ent.tally = existing->tally;
-			});
+			auto & queue_by_hash = queue.get<tag_hash> ();
+			if (auto queue_existing = queue_by_hash.find (hash); queue_existing != queue_by_hash.end ())
+			{
+				queue_by_hash.modify (queue_existing, [&existing] (queue_entry & ent) {
+					ent.tally = existing->tally;
+					ent.final_tally = existing->final_tally;
+				});
+			}
 		}
 	}
 	else
@@ -131,7 +149,7 @@ void nano::vote_cache::vote_impl (const nano::block_hash & hash, const nano::acc
 		{
 			queue_by_hash.erase (queue_existing);
 		}
-		queue_by_hash.insert ({ hash, cache_entry.tally });
+		queue_by_hash.insert ({ hash, cache_entry.tally, cache_entry.final_tally });
 
 		trim_overflow_locked ();
 	}
@@ -227,17 +245,36 @@ std::optional<nano::vote_cache::entry> nano::vote_cache::peek (nano::uint128_t c
 	return {};
 }
 
+std::optional<nano::vote_cache::entry> nano::vote_cache::peek_final (nano::uint128_t const & min_final_tally) const
+{
+	nano::lock_guard<nano::mutex> lock{ mutex };
+
+	if (!queue.empty ())
+	{
+		auto & queue_by_tally = queue.get<tag_final_tally> ();
+		auto top = std::prev (queue_by_tally.end ()); // Iterator to element with the highest tally
+		if (auto maybe_cache_entry = find_locked (top->hash); maybe_cache_entry)
+		{
+			if (maybe_cache_entry->final_tally >= min_final_tally)
+			{
+				return maybe_cache_entry.value ();
+			}
+		}
+	}
+	return {};
+}
+
 void nano::vote_cache::trigger (const nano::block_hash & hash)
 {
 	nano::lock_guard<nano::mutex> lock{ mutex };
 
-	auto & queue_by_hash = queue.get<tag_hash> ();
 	// Only reinsert to queue if it is not already in queue and there are votes in passive cache
+	auto & queue_by_hash = queue.get<tag_hash> ();
 	if (auto existing_queue = queue_by_hash.find (hash); existing_queue == queue_by_hash.end ())
 	{
 		if (auto maybe_cache_entry = find_locked (hash); maybe_cache_entry)
 		{
-			queue_by_hash.insert ({ hash, maybe_cache_entry->tally });
+			queue_by_hash.insert ({ hash, maybe_cache_entry->tally, maybe_cache_entry->final_tally });
 
 			trim_overflow_locked ();
 		}
@@ -268,6 +305,38 @@ void nano::vote_cache::trim_overflow_locked ()
 	if (queue.size () > max_size)
 	{
 		queue.get<tag_sequenced> ().pop_front ();
+	}
+}
+
+void nano::vote_cache::iterate (const nano::uint128_t & min_tally, const nano::uint128_t & min_final_tally, const std::function<void (entry const &)> & action) const
+{
+	std::vector<entry> to_process;
+	{
+		// TODO: Iterate without holding a lock
+		nano::lock_guard<nano::mutex> lock{ mutex };
+
+		for (auto & entry : cache.get<tag_final_tally> ())
+		{
+//			if (entry.final_tally < min_final_tally)
+//			{
+//				break;
+//			}
+			to_process.push_back (entry);
+		}
+
+		for (auto & entry : cache.get<tag_tally> ())
+		{
+//			if (entry.tally < min_tally)
+//			{
+//				break;
+//			}
+			to_process.push_back (entry);
+		}
+	}
+
+	for (auto & entry : to_process)
+	{
+		action (entry);
 	}
 }
 

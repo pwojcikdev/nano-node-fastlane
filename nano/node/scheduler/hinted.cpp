@@ -45,7 +45,7 @@ void nano::scheduler::hinted::stop ()
 
 void nano::scheduler::hinted::notify ()
 {
-	condition.notify_all ();
+	//	condition.notify_all ();
 }
 
 bool nano::scheduler::hinted::predicate (nano::uint128_t const & minimum_tally) const
@@ -53,11 +53,13 @@ bool nano::scheduler::hinted::predicate (nano::uint128_t const & minimum_tally) 
 	// Check if there is space inside AEC for a new hinted election
 	if (active.vacancy (nano::election_behavior::hinted) > 0)
 	{
-		// Check if there is any vote cache entry surpassing our minimum vote tally threshold
-		if (inactive_vote_cache.peek (minimum_tally))
-		{
-			return true;
-		}
+		//		// Check if there is any vote cache entry surpassing our minimum vote tally threshold
+		//		if (inactive_vote_cache.peek (minimum_tally))
+		//		{
+		//			return true;
+		//		}
+
+		return true;
 	}
 	return false;
 }
@@ -95,11 +97,74 @@ bool nano::scheduler::hinted::run_one (nano::uint128_t const & minimum_tally)
 	return false;
 }
 
+bool nano::scheduler::hinted::activate (const nano::transaction & transaction, const nano::block_hash & hash, bool check_dependents)
+{
+	// Check if block exists
+	if (auto block = node.store.block.get (transaction, hash); block != nullptr)
+	{
+		// Ensure block is not already confirmed
+		if (node.block_confirmed_or_being_confirmed (transaction, hash))
+		{
+			stats.inc (nano::stat::type::hinting, nano::stat::detail::already_confirmed);
+			return false;
+		}
+		if (check_dependents && !node.ledger.dependents_confirmed (transaction, *block))
+		{
+			stats.inc (nano::stat::type::hinting, nano::stat::detail::dependent_unconfirmed);
+			return false;
+		}
+
+		// Try to insert it into AEC as hinted election
+		// We check for AEC vacancy inside our predicate
+		auto result = node.active.insert (block, nano::election_behavior::hinted);
+		stats.inc (nano::stat::type::hinting, result.inserted ? nano::stat::detail::insert : nano::stat::detail::insert_failed);
+		return true;
+	}
+	else
+	{
+		// Missing block in ledger to start an election
+		stats.inc (nano::stat::type::hinting, nano::stat::detail::missing_block);
+		node.bootstrap_block (hash);
+	}
+
+	return false;
+}
+
+void nano::scheduler::hinted::run_iterative ()
+{
+	const auto minimum_tally = tally_threshold ();
+	const auto minimum_final_tally = final_tally_threshold ();
+
+	auto transaction = node.store.tx_begin_read ();
+
+	node.inactive_vote_cache.iterate (minimum_tally, minimum_final_tally, [this, &transaction, minimum_tally, minimum_final_tally] (auto & entry) {
+		//		if (entry.cooldown (std::chrono::seconds{ 5 }))
+		//		{
+		//			return;
+		//		}
+
+		if (entry.final_tally >= minimum_final_tally)
+		{
+			stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_final);
+			activate (transaction, entry.hash);
+			return;
+		}
+		if (entry.tally >= minimum_tally)
+		{
+			stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_normal);
+			activate (transaction, entry.hash, /* ensure previous confirmed */ true);
+			return;
+		}
+	});
+}
+
 void nano::scheduler::hinted::run ()
 {
 	nano::unique_lock<nano::mutex> lock{ mutex };
 	while (!stopped)
 	{
+		stats.inc (nano::stat::type::hinting, nano::stat::detail::loop);
+
 		// It is possible that if we are waiting long enough this tally becomes outdated due to changes in trended online weight
 		// However this is only used here for hinting, election does independent tally calculation, so there is no need to ensure it's always up-to-date
 		const auto minimum_tally = tally_threshold ();
@@ -119,7 +184,8 @@ void nano::scheduler::hinted::run ()
 
 			if (predicate (minimum_tally))
 			{
-				run_one (minimum_tally);
+				//				run_one (minimum_tally);
+				run_iterative ();
 			}
 
 			lock.lock ();
@@ -129,6 +195,14 @@ void nano::scheduler::hinted::run ()
 
 nano::uint128_t nano::scheduler::hinted::tally_threshold () const
 {
-	auto min_tally = (online_reps.trended () / 100) * node.config.election_hint_weight_percent;
-	return min_tally;
+	//	auto min_tally = (online_reps.trended () / 100) * node.config.election_hint_weight_percent;
+	//	return min_tally;
+
+	return 0;
+}
+
+nano::uint128_t nano::scheduler::hinted::final_tally_threshold () const
+{
+	auto quorum = online_reps.delta ();
+	return quorum;
 }

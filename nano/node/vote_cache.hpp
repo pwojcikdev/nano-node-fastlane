@@ -11,6 +11,7 @@
 #include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index_container.hpp>
 
+#include <functional>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -83,8 +84,14 @@ public:
 		 */
 		std::size_t size () const;
 
+	public:
+		bool cooldown (std::chrono::milliseconds cooldown_time) const;
+
 	private:
 		void recalculate_tally ();
+
+	private:
+		mutable std::chrono::steady_clock::time_point last_cooldown{};
 	};
 
 private:
@@ -93,6 +100,7 @@ private:
 	public:
 		nano::block_hash hash{ 0 };
 		nano::uint128_t tally{ 0 };
+		nano::uint128_t final_tally{ 0 };
 	};
 
 public:
@@ -117,6 +125,11 @@ public:
 	 */
 	std::optional<entry> peek (nano::uint128_t const & min_tally = 0) const;
 	/**
+	 * Returns an entry with the highest tally.
+	 * @param min_tally minimum *final* tally threshold, entries below with their voting weight below this will be ignored
+	 */
+	std::optional<entry> peek_final (nano::uint128_t const & min_final_tally = 0) const;
+	/**
 	 * Returns an entry with the highest tally and removes it from container.
 	 * @param min_tally minimum tally threshold, entries below with their voting weight below this will be ignored
 	 */
@@ -132,6 +145,9 @@ public:
 	std::size_t queue_size () const;
 	bool cache_empty () const;
 	bool queue_empty () const;
+
+public:
+	void iterate (nano::uint128_t const & min_tally, nano::uint128_t const & min_final_tally, std::function<void (entry const &)> const & action) const;
 
 public: // Container info
 	std::unique_ptr<nano::container_info_component> collect_container_info (std::string const & name);
@@ -151,8 +167,9 @@ private:
 
 	// clang-format off
 	class tag_sequenced {};
-	class tag_tally {};
 	class tag_hash {};
+	class tag_tally {};
+	class tag_final_tally {};
 	// clang-format on
 
 	// clang-format off
@@ -160,7 +177,12 @@ private:
 	mi::indexed_by<
 		mi::sequenced<mi::tag<tag_sequenced>>,
 		mi::hashed_unique<mi::tag<tag_hash>,
-			mi::member<entry, nano::block_hash, &entry::hash>>>>;
+			mi::member<entry, nano::block_hash, &entry::hash>>,
+		mi::ordered_non_unique<mi::tag<tag_tally>,
+			mi::member<entry, nano::uint128_t, &entry::tally>, std::greater<>>, // DESC
+		mi::ordered_non_unique<mi::tag<tag_final_tally>,
+			mi::member<entry, nano::uint128_t, &entry::final_tally>, std::greater<>> // DESC
+	>>;
 	// clang-format on
 	ordered_cache cache;
 
@@ -170,8 +192,11 @@ private:
 		mi::sequenced<mi::tag<tag_sequenced>>,
 		mi::ordered_non_unique<mi::tag<tag_tally>,
 			mi::member<queue_entry, nano::uint128_t, &queue_entry::tally>>,
+		mi::ordered_non_unique<mi::tag<tag_final_tally>,
+			mi::member<queue_entry, nano::uint128_t, &queue_entry::final_tally>>,
 		mi::hashed_unique<mi::tag<tag_hash>,
-			mi::member<queue_entry, nano::block_hash, &queue_entry::hash>>>>;
+			mi::member<queue_entry, nano::block_hash, &queue_entry::hash>>
+	>>;
 	// clang-format on
 	ordered_queue queue;
 
