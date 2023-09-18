@@ -257,6 +257,11 @@ enum class detail : uint8_t
 
 	// hinting
 	missing_block,
+	dependent_unconfirmed,
+	already_confirmed,
+	activate_normal,
+	activate_final,
+	dependent_activated,
 
 	// bootstrap server
 	response,

@@ -43,11 +43,14 @@ public:
 	void notify ();
 
 private:
-	bool predicate (nano::uint128_t const & minimum_tally) const;
+	bool predicate () const;
 	void run ();
-	bool run_one (nano::uint128_t const & minimum_tally);
+	void run_iterative ();
+	bool activate (nano::store::transaction const &, nano::block_hash const & hash, bool check_dependents);
+	void activate_dependents (nano::store::transaction const &, nano::block const & block);
 
 	nano::uint128_t tally_threshold () const;
+	nano::uint128_t final_tally_threshold () const;
 
 private: // Dependencies
 	nano::node & node;
