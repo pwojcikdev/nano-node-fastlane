@@ -196,7 +196,7 @@ private:
 	 * Checks if vote passes minimum representative weight threshold and adds it to inactive vote cache
 	 * TODO: Should be moved to `vote_cache` class
 	 */
-	void add_inactive_vote_cache (nano::block_hash const & hash, std::shared_ptr<nano::vote> vote);
+	void add_vote_cache (nano::block_hash const & hash, std::shared_ptr<nano::vote> vote);
 
 private: // Dependencies
 	nano::confirmation_height_processor & confirmation_height_processor;

@@ -10,7 +10,6 @@
 
 namespace
 {
-
 }
 
 nano::transport::channel::channel (nano::node & node_a) :
