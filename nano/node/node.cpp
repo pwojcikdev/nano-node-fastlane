@@ -232,7 +232,6 @@ nano::node::node (boost::asio::io_context & io_ctx_a, boost::filesystem::path co
 		// Notify election schedulers when AEC frees election slot
 		active.vacancy_update = [this] () {
 			scheduler.buckets.notify ();
-			scheduler.hinted.notify ();
 			scheduler.optimistic.notify ();
 		};
 
