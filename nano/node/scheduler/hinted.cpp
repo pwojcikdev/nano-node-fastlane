@@ -3,7 +3,7 @@
 #include <nano/node/scheduler/hinted.hpp>
 
 nano::scheduler::hinted::config::config (nano::node_config const & config) :
-	vote_cache_check_interval_ms{ config.network_params.network.is_dev_network () ? 100u : 1000u }
+	vote_cache_check_interval_ms{ config.network_params.network.is_dev_network () ? 100u : 5000u }
 {
 }
 
@@ -118,6 +118,11 @@ void nano::scheduler::hinted::run_iterative ()
 			break;
 		}
 
+		if (cooldown (entry.hash))
+		{
+			continue;
+		}
+
 		stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_final);
 		activate (transaction, entry.hash, /* activate regardless of dependents */ false);
 	}
@@ -127,6 +132,11 @@ void nano::scheduler::hinted::run_iterative ()
 		if (!predicate ())
 		{
 			break;
+		}
+
+		if (cooldown (entry.hash))
+		{
+			continue;
 		}
 
 		stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_normal);
@@ -151,14 +161,10 @@ void nano::scheduler::hinted::run ()
 
 		if (!stopped)
 		{
-			lock.unlock ();
-
 			if (predicate ())
 			{
 				run_iterative ();
 			}
-
-			lock.lock ();
 		}
 	}
 }
@@ -175,4 +181,33 @@ nano::uint128_t nano::scheduler::hinted::final_tally_threshold () const
 {
 	auto quorum = online_reps.delta ();
 	return quorum;
+}
+
+bool nano::scheduler::hinted::cooldown (const nano::block_hash & hash)
+{
+	auto const now = std::chrono::steady_clock::now ();
+	auto const cooldown = std::chrono::seconds{ 15 };
+
+	// Check if the hash is still in the cooldown period using the hashed index
+	auto const & hashed_index = cooldowns_m.get<tag_hash> ();
+	if (auto it = hashed_index.find (hash); it != hashed_index.end ())
+	{
+		if (it->timeout > now)
+		{
+			return true; // Needs cooldown
+		}
+		cooldowns_m.erase (it); // Entry is outdated, so remove it
+	}
+
+	// Insert the new entry
+	cooldowns_m.insert ({ hash, now + cooldown });
+
+	// Trim old entries
+	auto & seq_index = cooldowns_m.get<tag_timeout> ();
+	while (!seq_index.empty () && seq_index.begin ()->timeout <= now)
+	{
+		seq_index.erase (seq_index.begin ());
+	}
+
+	return false; // No need to cooldown
 }
