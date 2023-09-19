@@ -111,25 +111,27 @@ void nano::scheduler::hinted::run_iterative ()
 
 	auto transaction = node.store.tx_begin_read ();
 
-	vote_cache.iterate (minimum_tally, minimum_final_tally, [this, &transaction, minimum_tally, minimum_final_tally] (auto & entry) {
+	for (auto const & entry : vote_cache.top_final (minimum_final_tally))
+	{
 		if (!predicate ())
 		{
-			return;
+			break;
 		}
 
-		if (entry.final_tally () >= minimum_final_tally)
+		stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_final);
+		activate (transaction, entry.hash, /* activate regardless of dependents */ false);
+	}
+
+	for (auto const & entry : vote_cache.top (minimum_tally))
+	{
+		if (!predicate ())
 		{
-			stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_final);
-			activate (transaction, entry.hash (), /* activate regardless of dependents */ false);
-			return;
+			break;
 		}
-		if (entry.tally () >= minimum_tally)
-		{
-			stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_normal);
-			activate (transaction, entry.hash (), /* ensure previous confirmed */ true);
-			return;
-		}
-	});
+
+		stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_normal);
+		activate (transaction, entry.hash, /* ensure previous confirmed */ true);
+	}
 }
 
 void nano::scheduler::hinted::run ()

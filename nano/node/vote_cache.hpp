@@ -139,7 +139,15 @@ public:
 	bool queue_empty () const;
 
 public:
-	void iterate (nano::uint128_t const & min_tally, nano::uint128_t const & min_final_tally, std::function<void (entry const &)> const & action) const;
+	struct top_entry
+	{
+		nano::block_hash hash;
+		nano::uint128_t tally;
+		nano::uint128_t final_tally;
+	};
+
+	std::vector<top_entry> top (nano::uint128_t const & min_tally) const;
+	std::vector<top_entry> top_final (nano::uint128_t const & min_final_tally) const;
 
 public: // Container info
 	std::unique_ptr<nano::container_info_component> collect_container_info (std::string const & name);

@@ -288,28 +288,40 @@ void nano::vote_cache::trim_overflow_locked ()
 	}
 }
 
-void nano::vote_cache::iterate (const nano::uint128_t & min_tally, const nano::uint128_t & min_final_tally, const std::function<void (entry const &)> & action) const
+std::vector<nano::vote_cache::top_entry> nano::vote_cache::top (const nano::uint128_t & min_tally) const
 {
-	std::vector<entry> to_process;
+	std::vector<top_entry> results;
 	{
-		// TODO: Iterate without holding a lock
+		nano::lock_guard<nano::mutex> lock{ mutex };
+
+		for (auto & entry : cache.get<tag_tally> ())
+		{
+			if (entry.tally () < min_tally)
+			{
+				break;
+			}
+			results.push_back ({ entry.hash (), entry.tally (), entry.final_tally () });
+		}
+	}
+	return results;
+}
+
+std::vector<nano::vote_cache::top_entry> nano::vote_cache::top_final (const nano::uint128_t & min_final_tally) const
+{
+	std::vector<top_entry> results;
+	{
 		nano::lock_guard<nano::mutex> lock{ mutex };
 
 		for (auto & entry : cache.get<tag_final_tally> ())
 		{
-			to_process.push_back (entry);
-		}
-
-		for (auto & entry : cache.get<tag_tally> ())
-		{
-			to_process.push_back (entry);
+			if (entry.final_tally () < min_final_tally)
+			{
+				break;
+			}
+			results.push_back ({ entry.hash (), entry.tally (), entry.final_tally () });
 		}
 	}
-
-	for (auto & entry : to_process)
-	{
-		action (entry);
-	}
+	return results;
 }
 
 std::unique_ptr<nano::container_info_component> nano::vote_cache::collect_container_info (const std::string & name)
