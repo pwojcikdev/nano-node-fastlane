@@ -192,7 +192,7 @@ nano::node::node (boost::asio::io_context & io_ctx_a, boost::filesystem::path co
 	history{ config.network_params.voting },
 	vote_uniquer (block_uniquer),
 	confirmation_height_processor (ledger, write_database_queue, config.conf_height_processor_batch_min_time, nlogger, node_initialized_latch, flags.confirmation_height_processor_mode),
-	inactive_vote_cache{ nano::nodeconfig_to_vote_cache_config (config, flags) },
+	vote_cache{ nano::nodeconfig_to_vote_cache_config (config, flags) },
 	generator{ config, ledger, wallets, vote_processor, history, network, stats, nlogger, /* non-final */ false },
 	final_generator{ config, ledger, wallets, vote_processor, history, network, stats, nlogger, /* final */ true },
 	active (*this, confirmation_height_processor),
@@ -209,7 +209,7 @@ nano::node::node (boost::asio::io_context & io_ctx_a, boost::filesystem::path co
 	block_broadcast{ network, block_arrival, !flags.disable_block_processor_republishing },
 	block_publisher{ active },
 	gap_tracker{ gap_cache },
-	process_live_dispatcher{ ledger, scheduler.priority, inactive_vote_cache, websocket }
+	process_live_dispatcher{ ledger, scheduler.priority, vote_cache, websocket }
 {
 	nlogger.debug (nano::log::tag::node, "Constructing node...");
 
@@ -221,7 +221,7 @@ nano::node::node (boost::asio::io_context & io_ctx_a, boost::filesystem::path co
 		this->block_processor.add (info.block);
 	});
 
-	inactive_vote_cache.rep_weight_query = [this] (nano::account const & rep) {
+	vote_cache.rep_weight_query = [this] (nano::account const & rep) {
 		return ledger.weight (rep);
 	};
 
@@ -573,8 +573,8 @@ std::unique_ptr<nano::container_info_component> nano::collect_container_info (no
 	composite->add_component (collect_container_info (node.confirmation_height_processor, "confirmation_height_processor"));
 	composite->add_component (collect_container_info (node.distributed_work, "distributed_work"));
 	composite->add_component (collect_container_info (node.aggregator, "request_aggregator"));
-	composite->add_component (node.scheduler.collect_container_info ("scheduler"));
-	composite->add_component (node.inactive_vote_cache.collect_container_info ("inactive_vote_cache"));
+	composite->add_component (node.scheduler.collect_container_info ("election_scheduler"));
+	composite->add_component (node.vote_cache.collect_container_info ("vote_cache"));
 	composite->add_component (collect_container_info (node.generator, "vote_generator"));
 	composite->add_component (collect_container_info (node.final_generator, "vote_generator_final"));
 	composite->add_component (node.ascendboot.collect_container_info ("bootstrap_ascending"));
