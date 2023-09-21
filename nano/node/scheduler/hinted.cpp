@@ -138,7 +138,7 @@ void nano::scheduler::hinted::run_iterative ()
 	{
 		if (!predicate ())
 		{
-			break;
+			return;
 		}
 
 		if (cooldown (entry.hash))
@@ -156,7 +156,7 @@ void nano::scheduler::hinted::run_iterative ()
 	{
 		if (!predicate ())
 		{
-			break;
+			return;
 		}
 
 		if (cooldown (entry.hash))
@@ -176,9 +176,7 @@ void nano::scheduler::hinted::run ()
 	{
 		stats.inc (nano::stat::type::hinting, nano::stat::detail::loop);
 
-		condition.wait_for (lock, std::chrono::milliseconds (config.check_interval), [this] () {
-			return stopped || predicate ();
-		});
+		condition.wait_for (lock, config.check_interval);
 
 		debug_assert ((std::this_thread::yield (), true)); // Introduce some random delay in debug builds
 
