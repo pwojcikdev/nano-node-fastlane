@@ -1,14 +1,18 @@
 #include <nano/lib/asio.hpp>
 
+nano::id_dispenser nano::shared_const_buffer::id_gen;
+
 nano::shared_const_buffer::shared_const_buffer (std::vector<uint8_t> const & data) :
 	m_data (std::make_shared<std::vector<uint8_t>> (data)),
-	m_buffer (boost::asio::buffer (*m_data))
+	m_buffer (boost::asio::buffer (*m_data)),
+	id (id_gen.next_id ())
 {
 }
 
 nano::shared_const_buffer::shared_const_buffer (std::vector<uint8_t> && data) :
 	m_data (std::make_shared<std::vector<uint8_t>> (std::move (data))),
-	m_buffer (boost::asio::buffer (*m_data))
+	m_buffer (boost::asio::buffer (*m_data)),
+	id (id_gen.next_id ())
 {
 }
 
@@ -19,13 +23,15 @@ nano::shared_const_buffer::shared_const_buffer (uint8_t data) :
 
 nano::shared_const_buffer::shared_const_buffer (std::string const & data) :
 	m_data (std::make_shared<std::vector<uint8_t>> (data.begin (), data.end ())),
-	m_buffer (boost::asio::buffer (*m_data))
+	m_buffer (boost::asio::buffer (*m_data)),
+	id (id_gen.next_id ())
 {
 }
 
 nano::shared_const_buffer::shared_const_buffer (std::shared_ptr<std::vector<uint8_t>> const & data) :
 	m_data (data),
-	m_buffer (boost::asio::buffer (*m_data))
+	m_buffer (boost::asio::buffer (*m_data)),
+	id (id_gen.next_id ())
 {
 }
 
