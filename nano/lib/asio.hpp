@@ -1,6 +1,7 @@
 #pragma once
 
 #include <nano/boost/asio/write.hpp>
+#include <nano/lib/id_dispenser.hpp>
 
 namespace nano
 {
@@ -21,6 +22,8 @@ public:
 
 	std::size_t size () const;
 	std::vector<uint8_t> to_bytes () const;
+
+	nano::id_dispenser::id_t const id;
 
 private:
 	std::shared_ptr<std::vector<uint8_t>> m_data;

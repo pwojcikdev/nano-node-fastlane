@@ -20,23 +20,42 @@ void nano::transport::channel::send (nano::message & message_a, std::function<vo
 	auto detail = nano::to_stat_detail (message_a.header.type);
 	auto is_droppable_by_limiter = (drop_policy_a == nano::transport::buffer_drop_policy::limiter);
 	auto should_pass (node.outbound_limiter.should_pass (buffer.size (), to_bandwidth_limit_type (traffic_type)));
-	if (!is_droppable_by_limiter || should_pass)
+
+	bool send = !is_droppable_by_limiter || should_pass;
+
+	node.nlogger.trace (nano::log::tag::channel_send, nano::to_log_detail (message_a.type ()),
+	nano::nlogger::arg{ "message", message_a },
+	nano::nlogger::arg{ "channel", *this },
+	nano::nlogger::arg{ "dropped", !send },
+	nano::nlogger::arg{ "traffic_type", traffic_type },
+	nano::nlogger::arg{ "drop_policy", drop_policy_a },
+	nano::nlogger::arg{ "size", buffer.size () },
+	nano::nlogger::arg{ "should_pass", should_pass },
+	nano::nlogger::arg{ "buffer_id", buffer.id });
+
+	if (send)
 	{
 		node.stats.inc (nano::stat::type::message, detail, nano::stat::dir::out);
-		node.nlogger.trace (nano::log::tag::channel_sent, nano::to_log_detail (message_a.type ()),
-		nano::nlogger::arg{ "message", message_a },
-		nano::nlogger::arg{ "channel", *this },
-		nano::nlogger::arg{ "dropped", false });
 
-		send_buffer (buffer, callback_a, drop_policy_a, traffic_type);
+		auto cbk = [callback_a, node_s = node.shared (), type = message_a.type (), id = buffer.id] (boost::system::error_code const & ec, std::size_t size_a) {
+			node_s->nlogger.trace (nano::log::tag::channel_send_result, nano::to_log_detail (type),
+			nano::nlogger::arg{ "error", ec },
+			nano::nlogger::arg{ "error_msg", ec.message () },
+			nano::nlogger::arg{ "size", size_a },
+			nano::nlogger::arg{ "buffer_id", id },
+			nano::nlogger::arg{ "success", !ec });
+
+			if (callback_a)
+			{
+				callback_a (ec, size_a);
+			}
+		};
+
+		send_buffer (buffer, cbk, drop_policy_a, traffic_type);
 	}
 	else
 	{
 		node.stats.inc (nano::stat::type::drop, detail, nano::stat::dir::out);
-		node.nlogger.trace (nano::log::tag::channel_sent, nano::to_log_detail (message_a.type ()),
-		nano::nlogger::arg{ "message", message_a },
-		nano::nlogger::arg{ "channel", *this },
-		nano::nlogger::arg{ "dropped", true });
 
 		if (callback_a)
 		{
