@@ -132,6 +132,8 @@ void nano::scheduler::hinted::run_iterative ()
 
 	auto transaction = node.store.tx_begin_read ();
 
+	// Blocks with a vote tally higher than quorum
+	// Can be activated and confirmed immediately
 	for (auto const & entry : vote_cache.top_final (minimum_final_tally))
 	{
 		if (!predicate ())
@@ -148,6 +150,8 @@ void nano::scheduler::hinted::run_iterative ()
 		activate (transaction, entry.hash);
 	}
 
+	// Block with highest observed tally, might not be final
+	// Ensure all dependent blocks are already confirmed before activating
 	for (auto const & entry : vote_cache.top (minimum_tally))
 	{
 		if (!predicate ())
@@ -172,8 +176,6 @@ void nano::scheduler::hinted::run ()
 	{
 		stats.inc (nano::stat::type::hinting, nano::stat::detail::loop);
 
-		// Periodically wakeup for condition checking
-		// We are not notified every time new vote arrives in inactive vote cache as that happens too often
 		condition.wait_for (lock, std::chrono::milliseconds (config_m.vote_cache_check_interval_ms), [this] () {
 			return stopped || predicate ();
 		});
