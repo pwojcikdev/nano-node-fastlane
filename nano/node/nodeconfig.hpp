@@ -9,6 +9,7 @@
 #include <nano/lib/stats.hpp>
 #include <nano/node/bootstrap/bootstrap_config.hpp>
 #include <nano/node/ipc/ipc_config.hpp>
+#include <nano/node/scheduler/hinted.hpp>
 #include <nano/node/scheduler/optimistic.hpp>
 #include <nano/node/websocketconfig.hpp>
 #include <nano/secure/common.hpp>
@@ -46,6 +47,7 @@ public:
 	nano::network_params network_params;
 	std::optional<uint16_t> peering_port{};
 	nano::scheduler::optimistic_config optimistic_scheduler;
+	nano::scheduler::hinted_config hinted_scheduler;
 	std::vector<std::pair<std::string, uint16_t>> work_peers;
 	std::vector<std::pair<std::string, uint16_t>> secondary_work_peers{ { "127.0.0.1", 8076 } }; /* Default of nano-pow-server */
 	std::vector<std::string> preconfigured_peers;
@@ -57,7 +59,6 @@ public:
 	std::chrono::milliseconds vote_generator_delay{ std::chrono::milliseconds (100) };
 	unsigned vote_generator_threshold{ 3 };
 	nano::amount online_weight_minimum{ 60000 * nano::Gxrb_ratio };
-	unsigned election_hint_weight_percent{ 50 };
 	unsigned password_fanout{ 1024 };
 	unsigned io_threads{ std::max (4u, nano::hardware_concurrency ()) };
 	unsigned network_threads{ std::max (4u, nano::hardware_concurrency ()) };
