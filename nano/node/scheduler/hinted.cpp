@@ -54,29 +54,22 @@ bool nano::scheduler::hinted::predicate () const
 	return active.vacancy (nano::election_behavior::hinted) > 0;
 }
 
-bool nano::scheduler::hinted::activate (const nano::transaction & transaction, const nano::block_hash & hash, bool check_dependents)
+void nano::scheduler::hinted::activate (const nano::transaction & transaction, const nano::block_hash & hash)
 {
 	// Check if block exists
-	if (auto block = node.store.block.get (transaction, hash); block != nullptr)
+	if (auto block = node.store.block.get (transaction, hash); block)
 	{
 		// Ensure block is not already confirmed
 		if (node.block_confirmed_or_being_confirmed (transaction, hash))
 		{
 			stats.inc (nano::stat::type::hinting, nano::stat::detail::already_confirmed);
-			return false;
-		}
-		if (check_dependents && !node.ledger.dependents_confirmed (transaction, *block))
-		{
-			stats.inc (nano::stat::type::hinting, nano::stat::detail::dependent_unconfirmed);
-			activate_dependents (transaction, *block);
-			return false;
+			return;
 		}
 
 		// Try to insert it into AEC as hinted election
 		// We check for AEC vacancy inside the predicate
 		auto result = node.active.insert (block, nano::election_behavior::hinted);
 		stats.inc (nano::stat::type::hinting, result.inserted ? nano::stat::detail::insert : nano::stat::detail::insert_failed);
-		return true;
 	}
 	else
 	{
@@ -84,22 +77,50 @@ bool nano::scheduler::hinted::activate (const nano::transaction & transaction, c
 		stats.inc (nano::stat::type::hinting, nano::stat::detail::missing_block);
 		node.bootstrap_block (hash);
 	}
-
-	return false;
 }
 
-void nano::scheduler::hinted::activate_dependents (const nano::transaction & transaction, const nano::block & block)
+void nano::scheduler::hinted::activate_with_dependents (const nano::transaction & transaction, const nano::block_hash & hash)
 {
-	auto dependents = node.ledger.dependent_blocks (transaction, block);
-	for (auto const & hash : dependents)
+	std::stack<nano::block_hash> stack;
+	stack.push (hash);
+
+	while (!stack.empty ())
 	{
-		if (!hash.is_zero ())
+		const nano::block_hash current_hash = stack.top ();
+		stack.pop ();
+
+		// Check if block exists
+		if (auto block = node.store.block.get (transaction, current_hash); block)
 		{
-			bool activated = activate (transaction, hash, /* check dependents */ true);
-			if (activated)
+			// Ensure block is not already confirmed
+			if (node.block_confirmed_or_being_confirmed (transaction, current_hash))
 			{
-				stats.inc (nano::stat::type::hinting, nano::stat::detail::dependent_activated);
+				stats.inc (nano::stat::type::hinting, nano::stat::detail::already_confirmed);
+				continue; // Move on to the next item in the stack
 			}
+
+			if (!node.ledger.dependents_confirmed (transaction, *block))
+			{
+				stats.inc (nano::stat::type::hinting, nano::stat::detail::dependent_unconfirmed);
+				auto dependents = node.ledger.dependent_blocks (transaction, *block);
+				for (const auto & dependent_hash : dependents)
+				{
+					if (!dependent_hash.is_zero ())
+					{
+						stack.push (dependent_hash); // Add dependent block to the stack
+					}
+				}
+				continue; // Move on to the next item in the stack
+			}
+
+			// Try to insert it into AEC as hinted election
+			auto result = node.active.insert (block, nano::election_behavior::hinted);
+			stats.inc (nano::stat::type::hinting, result.inserted ? nano::stat::detail::insert : nano::stat::detail::insert_failed);
+		}
+		else
+		{
+			stats.inc (nano::stat::type::hinting, nano::stat::detail::missing_block);
+			node.bootstrap_block (current_hash);
 		}
 	}
 }
@@ -124,7 +145,7 @@ void nano::scheduler::hinted::run_iterative ()
 		}
 
 		stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_final);
-		activate (transaction, entry.hash, /* activate regardless of dependents */ false);
+		activate (transaction, entry.hash);
 	}
 
 	for (auto const & entry : vote_cache.top (minimum_tally))
@@ -140,7 +161,7 @@ void nano::scheduler::hinted::run_iterative ()
 		}
 
 		stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_normal);
-		activate (transaction, entry.hash, /* ensure previous confirmed */ true);
+		activate_with_dependents (transaction, entry.hash);
 	}
 }
 
