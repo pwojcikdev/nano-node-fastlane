@@ -139,7 +139,8 @@ private:
 		explicit write_queue (std::size_t max_size);
 
 		bool insert (buffer_t const &, callback_t, nano::transport::traffic_type);
-		std::optional<entry> pop ();
+		std::optional<entry> peek ();
+		void pop ();
 		void clear ();
 		std::size_t size (nano::transport::traffic_type) const;
 		bool empty () const;
@@ -149,6 +150,7 @@ private:
 	private:
 		mutable nano::mutex mutex;
 		std::unordered_map<nano::transport::traffic_type, std::queue<entry>> queues;
+		nano::transport::traffic_type last_queue;
 	};
 
 	write_queue send_queue;
@@ -157,6 +159,9 @@ protected:
 	boost::asio::strand<boost::asio::io_context::executor_type> strand;
 	boost::asio::ip::tcp::socket tcp_socket;
 	nano::node & node;
+
+	/** We use `steady_timer` as an asynchronous condition variable */
+	boost::asio::steady_timer write_timer;
 
 	/** The other end of the connection */
 	boost::asio::ip::tcp::endpoint remote;
@@ -196,12 +201,24 @@ protected:
 	std::atomic<bool> write_in_progress{ false };
 
 	void close_internal ();
-	void write_queued_messages ();
 	void set_default_timeout ();
 	void set_last_completion ();
 	void set_last_receive_time ();
 	void ongoing_checkup ();
+	void ongoing_write ();
 	void read_impl (std::shared_ptr<std::vector<uint8_t>> const & data_a, std::size_t size_a, std::function<void (boost::system::error_code const &, std::size_t)> callback_a);
+
+private:
+	static constexpr std::chrono::milliseconds write_throttling_delay{ 50 };
+
+	std::chrono::steady_clock::time_point write_cooldown;
+
+	// Must be called from strand
+	void notify_write ();
+	// Must be called from strand
+	void throttle_write ();
+
+	static bool is_transient_error (boost::system::error_code const &);
 
 private:
 	type_t type_m{ type_t::undefined };

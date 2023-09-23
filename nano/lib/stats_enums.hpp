@@ -24,6 +24,7 @@ enum class type : uint8_t
 	tcp,
 	channel,
 	socket,
+	socket_write,
 	confirmation_height,
 	confirmation_observer,
 	drop,
@@ -340,6 +341,11 @@ enum class detail : uint8_t
 	// optimistic
 	pop_gap,
 	pop_leaf,
+
+	// socket
+	error_critical,
+	error_transient,
+	success,
 
 	_last // Must be the last enum
 };
