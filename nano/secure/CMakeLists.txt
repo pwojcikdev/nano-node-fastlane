@@ -59,7 +59,6 @@ target_link_libraries(
   ed25519
   crypto_lib
   lmdb
-  Boost::iostreams
   Boost::system
   Boost::filesystem)
 

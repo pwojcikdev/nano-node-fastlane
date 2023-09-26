@@ -254,9 +254,9 @@ endif()
 
 target_link_libraries(
   node
-  rpc
-  secure
   nano_lib
+  secure
+  rpc
   libminiupnpc-static
   argon2
   lmdb
