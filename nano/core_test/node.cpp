@@ -1337,7 +1337,7 @@ TEST (node, DISABLED_broadcast_elected)
 	{
 		auto block (node->block (node->latest (nano::dev::genesis_key.pub)));
 		ASSERT_NE (nullptr, block);
-		node->block_confirm (block);
+		node->start_election (block);
 		auto election (node->active.election (block->qualified_root ()));
 		ASSERT_NE (nullptr, election);
 		election->force_confirm ();
@@ -1405,9 +1405,9 @@ TEST (node, rep_self_vote)
 	ASSERT_EQ (nano::process_result::progress, node0->process (fund_big).code);
 	ASSERT_EQ (nano::process_result::progress, node0->process (open_big).code);
 	// Confirm both blocks, allowing voting on the upcoming block
-	node0->block_confirm (node0->block (open_big.hash ()));
-	auto election = node0->active.election (open_big.qualified_root ());
-	ASSERT_NE (nullptr, election);
+	node0->start_election (node0->block (open_big.hash ()));
+	std::shared_ptr<nano::election> election;
+	ASSERT_TIMELY (5s, election = node0->active.election (open_big.qualified_root ()));
 	election->force_confirm ();
 
 	system.wallet (0)->insert_adhoc (rep_big.prv);
@@ -1553,7 +1553,7 @@ TEST (node, bootstrap_fork_open)
 	// Confirm send0 to allow starting and voting on the following blocks
 	for (auto node : system.nodes)
 	{
-		node->block_confirm (node->block (node->latest (nano::dev::genesis_key.pub)));
+		node->start_election (node->block (node->latest (nano::dev::genesis_key.pub)));
 		ASSERT_TIMELY (1s, node->active.election (send0.qualified_root ()));
 		auto election = node->active.election (send0.qualified_root ());
 		ASSERT_NE (nullptr, election);
@@ -2155,9 +2155,9 @@ TEST (node, block_confirm)
 	ASSERT_TRUE (node1.ledger.block_or_pruned_exists (send1->hash ()));
 	ASSERT_TRUE (node2.ledger.block_or_pruned_exists (send1_copy->hash ()));
 	// Confirm send1 on node2 so it can vote for send2
-	node2.block_confirm (send1_copy);
-	auto election = node2.active.election (send1_copy->qualified_root ());
-	ASSERT_NE (nullptr, election);
+	node2.start_election (send1_copy);
+	std::shared_ptr<nano::election> election;
+	ASSERT_TIMELY (5s, election = node2.active.election (send1_copy->qualified_root ()));
 	ASSERT_TIMELY (10s, node1.active.recently_cemented.list ().size () == 1);
 }
 
@@ -2275,9 +2275,9 @@ TEST (node, local_votes_cache)
 		ASSERT_EQ (nano::process_result::progress, node.ledger.process (transaction, *send2).code);
 	}
 	// Confirm blocks to allow voting
-	node.block_confirm (send2);
-	auto election = node.active.election (send2->qualified_root ());
-	ASSERT_NE (nullptr, election);
+	node.start_election (send2);
+	std::shared_ptr<nano::election> election;
+	ASSERT_TIMELY (5s, election = node.active.election (send2->qualified_root ()));
 	election->force_confirm ();
 	ASSERT_TIMELY (3s, node.ledger.cache.cemented_count == 3);
 	system.wallet (0)->insert_adhoc (nano::dev::genesis_key.prv);
@@ -2581,7 +2581,7 @@ TEST (node, vote_by_hash_bundle)
 	}
 
 	// Confirming last block will confirm whole chain and allow us to generate votes for those blocks later
-	ASSERT_TIMELY (5s, nano::test::confirm (node, { blocks.back () }));
+	ASSERT_TRUE (nano::test::start_elections (system, node, { blocks.back () }, true));
 	ASSERT_TIMELY (5s, nano::test::confirmed (node, { blocks.back () }));
 
 	system.wallet (0)->insert_adhoc (nano::dev::genesis_key.prv);
@@ -2760,7 +2760,7 @@ TEST (node, epoch_conflict_confirm)
 	ASSERT_TRUE (nano::test::process (node1, { send, send2, open }));
 
 	// Confirm open block in node1 to allow generating votes
-	ASSERT_TIMELY (5s, nano::test::confirm (node1, { open }));
+	ASSERT_TRUE (nano::test::start_elections (system, node1, { open }, true));
 	ASSERT_TIMELY (5s, nano::test::confirmed (node1, { open }));
 
 	// Process initial blocks on node0
@@ -2774,7 +2774,7 @@ TEST (node, epoch_conflict_confirm)
 	ASSERT_TIMELY (5s, nano::test::exists (node1, { change, epoch_open }));
 
 	// Confirm initial blocks in node1 to allow generating votes later
-	ASSERT_TIMELY (5s, nano::test::confirm (node1, { change, epoch_open, send2 }));
+	ASSERT_TRUE (nano::test::start_elections (system, node1, { change, epoch_open, send2 }, true));
 	ASSERT_TIMELY (5s, nano::test::confirmed (node1, { change, epoch_open, send2 }));
 
 	// Start elections for node0 for conflicting change and epoch_open blocks (those two blocks have the same root)
@@ -3155,7 +3155,7 @@ TEST (node, confirm_back)
 	node.process_active (open);
 	node.process_active (send2);
 	ASSERT_TIMELY (5s, node.block (send2->hash ()) != nullptr);
-	nano::test::start_elections (system, node, { send1, open, send2 });
+	ASSERT_TRUE (nano::test::start_elections (system, node, { send1, open, send2 }));
 	ASSERT_EQ (3, node.active.size ());
 	std::vector<nano::block_hash> vote_blocks;
 	vote_blocks.push_back (send2->hash ());
@@ -3489,7 +3489,7 @@ TEST (node, rollback_vote_self)
 
 	// Process and mark the first 2 blocks as confirmed to allow voting
 	ASSERT_TRUE (nano::test::process (node, { send1, open }));
-	ASSERT_TIMELY (5s, nano::test::confirm (node, { send1, open }));
+	ASSERT_TRUE (nano::test::start_elections (system, node, { send1, open }, true));
 	ASSERT_TIMELY (5s, node.ledger.cache.cemented_count == 3);
 
 	// wait until the rep weights have caught up with the weight transfer
@@ -3776,7 +3776,7 @@ TEST (node, dependency_graph)
 
 	// Start an election for the first block of the dependency graph, and ensure all blocks are eventually confirmed
 	system.wallet (0)->insert_adhoc (nano::dev::genesis_key.prv);
-	node.block_confirm (gen_send1);
+	node.start_election (gen_send1);
 
 	ASSERT_NO_ERROR (system.poll_until_true (15s, [&] {
 		// Not many blocks should be active simultaneously
@@ -3965,7 +3965,7 @@ TEST (node, dependency_graph_frontier)
 	system.wallet (0)->insert_adhoc (nano::dev::genesis_key.prv);
 
 	ASSERT_TIMELY (10s, node2.active.active (gen_send1->qualified_root ()));
-	node1.block_confirm (gen_send1);
+	node1.start_election (gen_send1);
 
 	ASSERT_TIMELY (15s, node1.ledger.cache.cemented_count == node1.ledger.cache.block_count);
 	ASSERT_TIMELY (15s, node2.ledger.cache.cemented_count == node2.ledger.cache.block_count);

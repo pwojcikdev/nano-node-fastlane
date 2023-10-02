@@ -80,38 +80,6 @@ bool nano::test::process_live (nano::node & node, std::vector<std::shared_ptr<na
 	return true;
 }
 
-bool nano::test::confirm (nano::node & node, std::vector<nano::block_hash> hashes)
-{
-	// Finish processing all blocks - FIXME: block processor flush is broken and should be removed
-	node.block_processor.flush ();
-	for (auto & hash : hashes)
-	{
-		if (node.block_confirmed (hash))
-		{
-			continue;
-		}
-
-		auto disk_block = node.block (hash);
-		// A sideband is required to start an election
-		release_assert (disk_block != nullptr);
-		release_assert (disk_block->has_sideband ());
-		// This only starts election
-		auto election = node.block_confirm (disk_block);
-		if (election == nullptr)
-		{
-			return false;
-		}
-		// Here we actually confirm the block
-		election->force_confirm ();
-	}
-	return true;
-}
-
-bool nano::test::confirm (nano::node & node, std::vector<std::shared_ptr<nano::block>> blocks)
-{
-	return confirm (node, blocks_to_hashes (blocks));
-}
-
 bool nano::test::confirmed (nano::node & node, std::vector<nano::block_hash> hashes)
 {
 	for (auto & hash : hashes)
@@ -254,20 +222,24 @@ std::shared_ptr<nano::election> nano::test::start_election (nano::test::system &
 	return election;
 }
 
-void nano::test::start_elections (nano::test::system & system_a, nano::node & node_a, std::vector<nano::block_hash> const & hashes_a, bool const forced_a)
+bool nano::test::start_elections (nano::test::system & system_a, nano::node & node_a, std::vector<nano::block_hash> const & hashes_a, bool const forced_a)
 {
 	for (auto const & hash_l : hashes_a)
 	{
 		auto election = nano::test::start_election (system_a, node_a, hash_l);
-		release_assert (election);
+		if (!election)
+		{
+			return false;
+		}
 		if (forced_a)
 		{
 			election->force_confirm ();
 		}
 	}
+	return true;
 }
 
-void nano::test::start_elections (nano::test::system & system_a, nano::node & node_a, std::vector<std::shared_ptr<nano::block>> const & blocks_a, bool const forced_a)
+bool nano::test::start_elections (nano::test::system & system_a, nano::node & node_a, std::vector<std::shared_ptr<nano::block>> const & blocks_a, bool const forced_a)
 {
-	nano::test::start_elections (system_a, node_a, blocks_to_hashes (blocks_a), forced_a);
+	return nano::test::start_elections (system_a, node_a, blocks_to_hashes (blocks_a), forced_a);
 }

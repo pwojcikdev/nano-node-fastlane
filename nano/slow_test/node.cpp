@@ -1132,7 +1132,7 @@ TEST (confirmation_height, many_accounts_send_receive_self)
 	// Confirm all of the accounts
 	for (auto & open_block : open_blocks)
 	{
-		node->block_confirm (open_block);
+		node->start_election (open_block);
 		std::shared_ptr<nano::election> election;
 		ASSERT_TIMELY (10s, (election = node->active.election (open_block->qualified_root ())) != nullptr);
 		election->force_confirm ();
@@ -2110,9 +2110,9 @@ TEST (node, aggressive_flooding)
 		ASSERT_EQ (node1.latest (nano::dev::genesis_key.pub), node_wallet.first->latest (nano::dev::genesis_key.pub));
 		ASSERT_EQ (genesis_blocks.back ()->hash (), node_wallet.first->latest (nano::dev::genesis_key.pub));
 		// Confirm blocks for rep crawler & receiving
-		nano::test::start_elections (system, *node_wallet.first, { genesis_blocks.back () }, true);
+		ASSERT_TRUE (nano::test::start_elections (system, *node_wallet.first, { genesis_blocks.back () }, true));
 	}
-	nano::test::start_elections (system, node1, { genesis_blocks.back () }, true);
+	ASSERT_TRUE (nano::test::start_elections (system, node1, { genesis_blocks.back () }, true));
 
 	// Wait until all genesis blocks are received
 	auto all_received = [&nodes_wallets] () {
