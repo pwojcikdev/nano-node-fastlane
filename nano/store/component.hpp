@@ -32,8 +32,8 @@ class ledger_cache;
 namespace store
 {
 	/**
- * Store manager
- */
+	 * Store manager
+	 */
 	class component
 	{
 		friend class rocksdb_block_store_tombstone_count_Test;
@@ -67,7 +67,7 @@ namespace store
 		store::frontier & frontier;
 		store::account & account;
 		store::pending & pending;
-		static int constexpr version_minimum{ 14 };
+		static int constexpr version_minimum{ 21 };
 		static int constexpr version_current{ 22 };
 
 	public:
