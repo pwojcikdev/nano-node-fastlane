@@ -261,6 +261,7 @@ enum class detail : uint8_t
 	already_confirmed,
 	activate_normal,
 	activate_final,
+	activate_final_confirmed,
 	dependent_activated,
 
 	// bootstrap server

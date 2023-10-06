@@ -132,9 +132,7 @@ void nano::scheduler::hinted::run_iterative ()
 
 	auto transaction = node.store.tx_begin_read ();
 
-	// Blocks with a vote tally higher than quorum
-	// Can be activated and confirmed immediately
-	for (auto const & entry : vote_cache.top_final (minimum_final_tally))
+	for (auto const & entry : vote_cache.top_final (minimum_tally))
 	{
 		if (!predicate ())
 		{
@@ -146,8 +144,18 @@ void nano::scheduler::hinted::run_iterative ()
 			continue;
 		}
 
-		stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_final);
-		activate (transaction, entry.hash);
+		if (entry.tally < minimum_final_tally)
+		{
+			stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_final);
+			activate_with_dependents (transaction, entry.hash);
+		}
+		else
+		{
+			// Blocks with a vote tally higher than quorum
+			// Can be activated and confirmed immediately
+			stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_final_confirmed);
+			activate (transaction, entry.hash);
+		}
 	}
 
 	// Block with highest observed tally, might not be final
