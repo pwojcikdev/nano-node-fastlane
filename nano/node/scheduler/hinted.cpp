@@ -132,34 +132,6 @@ void nano::scheduler::hinted::run_iterative ()
 
 	auto transaction = node.store.tx_begin_read ();
 
-	for (auto const & entry : vote_cache.top_final (minimum_tally))
-	{
-		if (!predicate ())
-		{
-			return;
-		}
-
-		if (cooldown (entry.hash))
-		{
-			continue;
-		}
-
-		if (entry.tally < minimum_final_tally)
-		{
-			stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_final);
-			activate_with_dependents (transaction, entry.hash);
-		}
-		else
-		{
-			// Blocks with a vote tally higher than quorum
-			// Can be activated and confirmed immediately
-			stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_final_confirmed);
-			activate (transaction, entry.hash);
-		}
-	}
-
-	// Block with highest observed tally, might not be final
-	// Ensure all dependent blocks are already confirmed before activating
 	for (auto const & entry : vote_cache.top (minimum_tally))
 	{
 		if (!predicate ())
@@ -172,8 +144,18 @@ void nano::scheduler::hinted::run_iterative ()
 			continue;
 		}
 
-		stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_normal);
-		activate_with_dependents (transaction, entry.hash);
+		if (entry.final_tally < minimum_final_tally)
+		{
+			// Ensure all dependent blocks are already confirmed before activating
+			stats.inc (nano::stat::type::hinting, nano::stat::detail::activate);
+			activate_with_dependents (transaction, entry.hash);
+		}
+		else
+		{
+			// Blocks with a vote tally higher than quorum, can be activated and confirmed immediately
+			stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_immediate);
+			activate (transaction, entry.hash);
+		}
 	}
 }
 

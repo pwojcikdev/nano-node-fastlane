@@ -259,9 +259,8 @@ enum class detail : uint8_t
 	missing_block,
 	dependent_unconfirmed,
 	already_confirmed,
-	activate_normal,
-	activate_final,
-	activate_final_confirmed,
+	activate,
+	activate_immediate,
 	dependent_activated,
 
 	// bootstrap server

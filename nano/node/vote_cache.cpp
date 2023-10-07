@@ -303,24 +303,19 @@ std::vector<nano::vote_cache::top_entry> nano::vote_cache::top (const nano::uint
 			results.push_back ({ entry.hash (), entry.tally (), entry.final_tally () });
 		}
 	}
-	return results;
-}
 
-std::vector<nano::vote_cache::top_entry> nano::vote_cache::top_final (const nano::uint128_t & min_final_tally) const
-{
-	std::vector<top_entry> results;
-	{
-		nano::lock_guard<nano::mutex> lock{ mutex };
-
-		for (auto & entry : cache.get<tag_final_tally> ())
+	// Sort by final tally then by normal tally, descending
+	std::sort (results.begin (), results.end (), [] (auto const & a, auto const & b) {
+		if (a.final_tally == b.final_tally)
 		{
-			if (entry.final_tally () < min_final_tally)
-			{
-				break;
-			}
-			results.push_back ({ entry.hash (), entry.tally (), entry.final_tally () });
+			return a.tally > b.tally;
 		}
-	}
+		else
+		{
+			return a.final_tally > b.final_tally;
+		}
+	});
+
 	return results;
 }
 
