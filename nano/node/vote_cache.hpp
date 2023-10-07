@@ -133,7 +133,6 @@ private:
 	class tag_sequenced {};
 	class tag_hash {};
 	class tag_tally {};
-	class tag_final_tally {};
 	// clang-format on
 
 	// clang-format off
@@ -143,9 +142,7 @@ private:
 		mi::hashed_unique<mi::tag<tag_hash>,
 			mi::const_mem_fun<entry, nano::block_hash, &entry::hash>>,
 		mi::ordered_non_unique<mi::tag<tag_tally>,
-			mi::const_mem_fun<entry, nano::uint128_t, &entry::tally>, std::greater<>>, // DESC
-		mi::ordered_non_unique<mi::tag<tag_final_tally>,
-			mi::const_mem_fun<entry, nano::uint128_t, &entry::final_tally>, std::greater<>> // DESC
+			mi::const_mem_fun<entry, nano::uint128_t, &entry::tally>, std::greater<>> // DESC
 	>>;
 	// clang-format on
 	ordered_cache cache;
