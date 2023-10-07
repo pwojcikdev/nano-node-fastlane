@@ -61,8 +61,7 @@ private:
 	bool predicate () const;
 	void run ();
 	void run_iterative ();
-	void activate (nano::store::transaction const &, nano::block_hash const & hash);
-	void activate_with_dependents (nano::store::transaction const &, nano::block_hash const & hash);
+	void activate (nano::store::transaction const &, nano::block_hash const & hash, bool check_dependents);
 
 	nano::uint128_t tally_threshold () const;
 	nano::uint128_t final_tally_threshold () const;

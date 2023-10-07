@@ -54,32 +54,7 @@ bool nano::scheduler::hinted::predicate () const
 	return active.vacancy (nano::election_behavior::hinted) > 0;
 }
 
-void nano::scheduler::hinted::activate (const nano::store::transaction & transaction, const nano::block_hash & hash)
-{
-	// Check if block exists
-	if (auto block = node.store.block.get (transaction, hash); block)
-	{
-		// Ensure block is not already confirmed
-		if (node.block_confirmed_or_being_confirmed (transaction, hash))
-		{
-			stats.inc (nano::stat::type::hinting, nano::stat::detail::already_confirmed);
-			return;
-		}
-
-		// Try to insert it into AEC as hinted election
-		// We check for AEC vacancy inside the predicate
-		auto result = node.active.insert (block, nano::election_behavior::hinted);
-		stats.inc (nano::stat::type::hinting, result.inserted ? nano::stat::detail::insert : nano::stat::detail::insert_failed);
-	}
-	else
-	{
-		// Missing block in ledger to start an election
-		stats.inc (nano::stat::type::hinting, nano::stat::detail::missing_block);
-		node.bootstrap_block (hash);
-	}
-}
-
-void nano::scheduler::hinted::activate_with_dependents (const nano::store::transaction & transaction, const nano::block_hash & hash)
+void nano::scheduler::hinted::activate (const nano::store::transaction & transaction, const nano::block_hash & hash, bool check_dependents)
 {
 	std::stack<nano::block_hash> stack;
 	stack.push (hash);
@@ -99,18 +74,22 @@ void nano::scheduler::hinted::activate_with_dependents (const nano::store::trans
 				continue; // Move on to the next item in the stack
 			}
 
-			if (!node.ledger.dependents_confirmed (transaction, *block))
+			if (check_dependents)
 			{
-				stats.inc (nano::stat::type::hinting, nano::stat::detail::dependent_unconfirmed);
-				auto dependents = node.ledger.dependent_blocks (transaction, *block);
-				for (const auto & dependent_hash : dependents)
+				// Perform a depth-first search of the dependency graph
+				if (!node.ledger.dependents_confirmed (transaction, *block))
 				{
-					if (!dependent_hash.is_zero ())
+					stats.inc (nano::stat::type::hinting, nano::stat::detail::dependent_unconfirmed);
+					auto dependents = node.ledger.dependent_blocks (transaction, *block);
+					for (const auto & dependent_hash : dependents)
 					{
-						stack.push (dependent_hash); // Add dependent block to the stack
+						if (!dependent_hash.is_zero ())
+						{
+							stack.push (dependent_hash); // Add dependent block to the stack
+						}
 					}
+					continue; // Move on to the next item in the stack
 				}
-				continue; // Move on to the next item in the stack
 			}
 
 			// Try to insert it into AEC as hinted election
@@ -144,17 +123,18 @@ void nano::scheduler::hinted::run_iterative ()
 			continue;
 		}
 
+		// Check dependents only if cached tally is lower than quorum
 		if (entry.final_tally < minimum_final_tally)
 		{
 			// Ensure all dependent blocks are already confirmed before activating
 			stats.inc (nano::stat::type::hinting, nano::stat::detail::activate);
-			activate_with_dependents (transaction, entry.hash);
+			activate (transaction, entry.hash, /* activate dependents */ true);
 		}
 		else
 		{
 			// Blocks with a vote tally higher than quorum, can be activated and confirmed immediately
 			stats.inc (nano::stat::type::hinting, nano::stat::detail::activate_immediate);
-			activate (transaction, entry.hash);
+			activate (transaction, entry.hash, false);
 		}
 	}
 }
