@@ -2,7 +2,7 @@
 
 #include <nano/lib/observer_set.hpp>
 #include <nano/lib/processing_queue.hpp>
-#include <nano/node/messages.hpp>
+#include <nano/messages//messages.hpp>
 
 #include <memory>
 #include <utility>

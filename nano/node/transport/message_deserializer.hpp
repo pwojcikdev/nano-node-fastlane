@@ -1,7 +1,7 @@
 #pragma once
 
 #include <nano/node/common.hpp>
-#include <nano/node/messages.hpp>
+#include <nano/messages/messages.hpp>
 
 #include <memory>
 #include <vector>
