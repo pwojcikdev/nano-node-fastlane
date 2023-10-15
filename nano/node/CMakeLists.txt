@@ -194,8 +194,6 @@ add_library(
   websocket_stream.cpp
   write_database_queue.hpp
   write_database_queue.cpp
-  messages.hpp
-  messages.cpp
   xorshift.hpp)
 
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
