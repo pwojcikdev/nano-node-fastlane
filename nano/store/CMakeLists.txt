@@ -107,3 +107,6 @@ target_link_libraries(
   Boost::pool
   Boost::stacktrace
   Boost::variant)
+
+include_directories(${BOOST_LIBRARY_INCLUDES})
+include_directories(${CMAKE_SOURCE_DIR}/submodules)
