@@ -656,10 +656,11 @@ add_library(blake2 crypto/blake2/blake2-config.h crypto/blake2/blake2-impl.h
 target_compile_definitions(blake2 PRIVATE -D__SSE2__)
 
 add_subdirectory(nano/crypto_lib)
+add_subdirectory(nano/lib)
 add_subdirectory(nano/secure)
 add_subdirectory(nano/store)
-add_subdirectory(nano/lib)
 add_subdirectory(nano/messages)
+add_subdirectory(nano/transport)
 add_subdirectory(nano/node)
 add_subdirectory(nano/nano_node)
 add_subdirectory(nano/rpc)
@@ -708,6 +709,7 @@ if(NANO_TEST OR RAIBLOCKS_TEST)
   add_subdirectory(nano/core_test)
   add_subdirectory(nano/rpc_test)
   add_subdirectory(nano/slow_test)
+  add_subdirectory(nano/transport_test)
   add_custom_target(
     all_tests
     COMMAND echo "BATCH BUILDING TESTS"
