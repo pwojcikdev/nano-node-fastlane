@@ -39,8 +39,8 @@ TEST (transport, basic)
 
 		std::cout << "done connecting" << std::endl;
 
-		nano::transport::v2::tcp::tcp_socket nano_socket_1{ io_ctx, std::move (socket1) };
-		nano::transport::v2::tcp::tcp_socket nano_socket_2{ io_ctx, std::move (socket2) };
+		nano::transport::v2::tcp::tcp_socket nano_socket_1{ std::move (socket1) };
+		nano::transport::v2::tcp::tcp_socket nano_socket_2{ std::move (socket2) };
 
 		auto receive_done = boost::asio::co_spawn (
 		io_ctx,
@@ -51,18 +51,17 @@ TEST (transport, basic)
 		},
 		boost::asio::use_future);
 
-		auto run_done = boost::asio::co_spawn (
+		auto send_done = boost::asio::co_spawn (
 		io_ctx,
 		[&nano_socket_2] () mutable -> boost::asio::awaitable<void> {
-			co_await nano_socket_2.run ();
+			nano::keepalive message{ nano::dev::network_params.network };
+			co_await nano_socket_2.send (message);
+
+			std::cout << "sent" << std::endl;
 		},
 		boost::asio::use_future);
 
-		nano::keepalive message{ nano::dev::network_params.network };
-		nano_socket_2.send (std::make_unique<nano::keepalive> (message));
-
-		std::cout << "sent" << std::endl;
-
+		send_done.wait ();
 		receive_done.wait ();
 
 		std::cout << "done message" << std::endl;

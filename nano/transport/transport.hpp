@@ -11,13 +11,15 @@ class message;
 
 namespace nano::transport::v2
 {
-using message_ptr = std::unique_ptr<nano::message>;
-
-class socket
+class channel
 {
 public:
-	virtual boost::asio::awaitable<message_ptr> receive () = 0;
-	virtual void send (message_ptr message) = 0;
-	virtual boost::asio::awaitable<void> run () = 0;
+	using sink_callback = std::function<void (std::unique_ptr<nano::message>)>;
+
+public:
+	virtual void send (nano::message const & message) = 0;
+
+	virtual void start ();
+	//	virtual void stop ();
 };
 }

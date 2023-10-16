@@ -680,4 +680,15 @@ public:
 	}
 	virtual void default_handler (nano::message const &){};
 };
+
+class message_deserializer
+{
+	static constexpr std::size_t max_message_size = 1024 * 4;
+
+public:
+	virtual ~message_deserializer () = default;
+
+	virtual nano::message_header deserialize_header (nano::stream &);
+	virtual std::unique_ptr<nano::message> deserialize_message (nano::stream &, nano::message_header const &);
+};
 }

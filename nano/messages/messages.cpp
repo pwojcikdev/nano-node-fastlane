@@ -1,5 +1,6 @@
 #include <nano/lib/blocks.hpp>
 #include <nano/lib/config.hpp>
+#include <nano/lib/errors.hpp>
 #include <nano/lib/memory.hpp>
 #include <nano/lib/stats_enums.hpp>
 #include <nano/lib/stream.hpp>
@@ -1934,4 +1935,32 @@ nano::log::detail nano::to_log_detail (nano::message_type type)
 	}
 	debug_assert (false);
 	return {};
+}
+
+/*
+ * message_deserializer
+ */
+
+nano::message_header nano::message_deserializer::deserialize_header (nano::stream & stream)
+{
+	bool error = false;
+	nano::message_header header{ error, stream };
+	if (error)
+	{
+		throw std::system_error (make_error_code (nano::error_messages::invalid_header));
+	}
+	if (!header.is_valid_message_type ())
+	{
+		throw std::system_error (make_error_code (nano::error_messages::invalid_type));
+	}
+	if (header.payload_length_bytes () > max_message_size)
+	{
+		throw std::system_error (make_error_code (nano::error_messages::size_too_large));
+	}
+	return header;
+}
+
+std::unique_ptr<nano::message> nano::message_deserializer::deserialize_message (nano::stream & stream, const nano::message_header & header)
+{
+	return nullptr;
 }
