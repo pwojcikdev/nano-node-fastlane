@@ -749,8 +749,6 @@ if(NANO_GUI OR RAIBLOCKS_GUI)
   target_link_libraries(
     qt
     node
-    secure
-    nano_lib
     libminiupnpc-static
     Qt5::Gui
     Qt5::Widgets)
@@ -807,8 +805,6 @@ if(NANO_GUI OR RAIBLOCKS_GUI)
     target_link_libraries(
       qt_test
       node
-      secure
-      test_common
       gtest
       gtest_main
       qt

@@ -204,7 +204,7 @@ target_link_libraries(
   node
   nano_lib
   nano_store
-  secure
+  nano_secure
         nano_messages
   rpc
   libminiupnpc-static

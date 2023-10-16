@@ -35,7 +35,7 @@ file(
   "}\n")
 
 add_library(
-  secure
+        nano_secure
   ${PLATFORM_SECURE_SOURCE}
   ${CMAKE_BINARY_DIR}/bootstrap_weights_live.cpp
   ${CMAKE_BINARY_DIR}/bootstrap_weights_beta.cpp
@@ -49,10 +49,10 @@ add_library(
   utility.cpp
   working.hpp)
 
-target_link_libraries(secure nano_lib ed25519 crypto_lib Boost::system
+target_link_libraries(nano_secure nano_lib ed25519 crypto_lib Boost::system
                       Boost::filesystem)
 
-target_compile_definitions(secure PUBLIC -DQT_NO_KEYWORDS
+target_compile_definitions(nano_secure PUBLIC -DQT_NO_KEYWORDS
                                          -DBOOST_ASIO_HAS_STD_ARRAY=1)
 
 include_directories(${CMAKE_SOURCE_DIR}/submodules)
