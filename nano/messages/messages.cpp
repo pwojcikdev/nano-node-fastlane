@@ -5,10 +5,7 @@
 #include <nano/lib/stream.hpp>
 #include <nano/lib/utility.hpp>
 #include <nano/lib/work.hpp>
-#include <nano/node/common.hpp>
-#include <nano/node/election.hpp>
 #include <nano/messages/messages.hpp>
-#include <nano/node/network.hpp>
 
 #include <boost/asio/ip/address_v6.hpp>
 #include <boost/endian/conversion.hpp>

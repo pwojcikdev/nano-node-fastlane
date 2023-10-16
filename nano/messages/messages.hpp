@@ -3,6 +3,7 @@
 #include <nano/lib/asio.hpp>
 #include <nano/lib/blocks.hpp>
 #include <nano/lib/config.hpp>
+#include <nano/lib/endpoint.hpp>
 #include <nano/lib/errors.hpp>
 #include <nano/lib/id_dispenser.hpp>
 #include <nano/lib/jsonconfig.hpp>
@@ -12,12 +13,12 @@
 #include <nano/lib/object_stream.hpp>
 #include <nano/lib/stats_enums.hpp>
 #include <nano/lib/stream.hpp>
-#include <nano/node/common.hpp>
 #include <nano/secure/common.hpp>
 
 #include <bitset>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
