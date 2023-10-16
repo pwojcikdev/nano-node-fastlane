@@ -33,6 +33,8 @@ add_library(
   configbase.hpp
   diagnosticsconfig.hpp
   diagnosticsconfig.cpp
+        endpoint.hpp
+        endpoint.cpp
   epoch.hpp
   epoch.cpp
   errors.hpp
