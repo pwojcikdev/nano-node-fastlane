@@ -3,7 +3,11 @@
 
 #include <boost/system/error_code.hpp>
 
-std::string nano::error_common_messages::message (int ev) const
+/*
+ * error_common
+ */
+
+std::string nano::error_common_category::message (int ev) const
 {
 	switch (static_cast<nano::error_common> (ev))
 	{
@@ -100,7 +104,11 @@ std::string nano::error_common_messages::message (int ev) const
 	return "Invalid error code";
 }
 
-std::string nano::error_blocks_messages::message (int ev) const
+/*
+ * error_blocks
+ */
+
+std::string nano::error_blocks_category::message (int ev) const
 {
 	switch (static_cast<nano::error_blocks> (ev))
 	{
@@ -123,7 +131,11 @@ std::string nano::error_blocks_messages::message (int ev) const
 	return "Invalid error code";
 }
 
-std::string nano::error_rpc_messages::message (int ev) const
+/*
+ * error_rpc
+ */
+
+std::string nano::error_rpc_category::message (int ev) const
 {
 	switch (static_cast<nano::error_rpc> (ev))
 	{
@@ -230,7 +242,11 @@ std::string nano::error_rpc_messages::message (int ev) const
 	return "Invalid error code";
 }
 
-std::string nano::error_process_messages::message (int ev) const
+/*
+ * error_process
+ */
+
+std::string nano::error_process_category::message (int ev) const
 {
 	switch (static_cast<nano::error_process> (ev))
 	{
@@ -267,7 +283,11 @@ std::string nano::error_process_messages::message (int ev) const
 	return "Invalid error code";
 }
 
-std::string nano::error_config_messages::message (int ev) const
+/*
+ * error_config
+ */
+
+std::string nano::error_config_category::message (int ev) const
 {
 	switch (static_cast<nano::error_config> (ev))
 	{
@@ -281,6 +301,10 @@ std::string nano::error_config_messages::message (int ev) const
 
 	return "Invalid error code";
 }
+
+/*
+ * nano::error
+ */
 
 nano::error::error (std::error_code code_a)
 {
@@ -373,9 +397,9 @@ nano::error::operator std::string () const
 }
 
 /**
-	 * Get error message, or an empty string if there's no error. If a custom error message is set,
-	 * that will be returned, otherwise the error_code#message() is returned.
-	 */
+ * Get error message, or an empty string if there's no error. If a custom error message is set,
+ * that will be returned, otherwise the error_code#message() is returned.
+ */
 std::string nano::error::get_message () const
 {
 	std::string res = message;

@@ -10,7 +10,7 @@
 
 using namespace std::chrono_literals;
 
-std::string nano::error_system_messages::message (int ev) const
+std::string nano::error_system_category::message (int ev) const
 {
 	switch (static_cast<nano::error_system> (ev))
 	{

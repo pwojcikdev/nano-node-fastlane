@@ -15,7 +15,7 @@ void reset_confirmation_heights (nano::store::write_transaction const & transact
 bool is_using_rocksdb (boost::filesystem::path const & data_path, boost::program_options::variables_map const & vm, std::error_code & ec);
 }
 
-std::string nano::error_cli_messages::message (int ev) const
+std::string nano::error_cli_category::message (int ev) const
 {
 	switch (static_cast<nano::error_cli> (ev))
 	{

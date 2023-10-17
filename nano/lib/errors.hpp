@@ -150,7 +150,7 @@ enum class error_config
 	invalid_value,
 	missing_value
 };
-} // nano namespace
+}; // nano namespace
 
 // Convenience macro to implement the standard boilerplate for using std::error_code with enums
 // Use this at the end of any header defining one or more error code enums.
@@ -158,7 +158,7 @@ enum class error_config
 	namespace namespace_name                                                                                   \
 	{                                                                                                          \
 		static_assert (static_cast<int> (enum_type::generic) > 0, "The first error enum must be generic = 1"); \
-		class enum_type##_messages : public std::error_category                                                \
+		class enum_type##_category : public std::error_category                                                \
 		{                                                                                                      \
 		public:                                                                                                \
 			char const * name () const noexcept override                                                       \
@@ -169,15 +169,15 @@ enum class error_config
 			std::string message (int ev) const override;                                                       \
 		};                                                                                                     \
                                                                                                                \
-		inline std::error_category const & enum_type##_category ()                                             \
+		inline std::error_category const & enum_type##_category_instance ()                                    \
 		{                                                                                                      \
-			static enum_type##_messages instance;                                                              \
+			static enum_type##_category instance;                                                              \
 			return instance;                                                                                   \
 		}                                                                                                      \
                                                                                                                \
 		inline std::error_code make_error_code (::namespace_name::enum_type err)                               \
 		{                                                                                                      \
-			return { static_cast<int> (err), enum_type##_category () };                                        \
+			return { static_cast<int> (err), enum_type##_category_instance () };                               \
 		}                                                                                                      \
 	}                                                                                                          \
 	namespace std                                                                                              \
