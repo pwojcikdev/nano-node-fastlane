@@ -1,4 +1,4 @@
-add_library(nano_messages messages.hpp messages.cpp)
+add_library(nano_messages messages.hpp messages.cpp errors.hpp errors.cpp)
 
 target_link_libraries(nano_messages nano_secure)
 
