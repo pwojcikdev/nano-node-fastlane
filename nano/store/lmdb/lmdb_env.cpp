@@ -1,19 +1,17 @@
 #include <nano/lib/utility.hpp>
 #include <nano/store/lmdb/lmdb_env.hpp>
 
-#include <boost/filesystem/operations.hpp>
-
-nano::store::lmdb::env::env (bool & error_a, boost::filesystem::path const & path_a, nano::store::lmdb::env::options options_a)
+nano::store::lmdb::env::env (bool & error_a, std::filesystem::path const & path_a, nano::store::lmdb::env::options options_a)
 {
 	init (error_a, path_a, options_a);
 }
 
-void nano::store::lmdb::env::init (bool & error_a, boost::filesystem::path const & path_a, nano::store::lmdb::env::options options_a)
+void nano::store::lmdb::env::init (bool & error_a, std::filesystem::path const & path_a, nano::store::lmdb::env::options options_a)
 {
 	boost::system::error_code error_mkdir, error_chmod;
 	if (path_a.has_parent_path ())
 	{
-		boost::filesystem::create_directories (path_a.parent_path (), error_mkdir);
+		std::filesystem::create_directories (path_a.parent_path (), error_mkdir);
 		nano::set_secure_perm_directory (path_a.parent_path (), error_chmod);
 		if (!error_mkdir)
 		{
@@ -55,13 +53,8 @@ void nano::store::lmdb::env::init (bool & error_a, boost::filesystem::path const
 			auto status4 (mdb_env_open (environment, path_a.string ().c_str (), environment_flags, 00600));
 			if (status4 != 0)
 			{
-				std::cerr << "Could not open lmdb environment: " << status4;
-				char * error_str (mdb_strerror (status4));
-				if (error_str)
-				{
-					std::cerr << ", " << error_str;
-				}
-				std::cerr << std::endl;
+				std::string message = "Could not open lmdb environment(" + std::to_string (status4) + "): " + mdb_strerror (status4);
+				throw std::runtime_error (message);
 			}
 			release_assert (status4 == 0);
 			error_a = status4 != 0;
