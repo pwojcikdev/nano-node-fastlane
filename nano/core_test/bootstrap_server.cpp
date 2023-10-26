@@ -371,11 +371,11 @@ TEST (bootstrap_server, serve_account_info)
 	ASSERT_NO_THROW (response_payload = std::get<nano::asc_pull_ack::account_info_payload> (response.payload));
 
 	ASSERT_EQ (response_payload.account, account);
-	ASSERT_EQ (response_payload.account_open, blocks.front ()->hash ());
-	ASSERT_EQ (response_payload.account_head, blocks.back ()->hash ());
-	ASSERT_EQ (response_payload.account_block_count, blocks.size ());
-	ASSERT_EQ (response_payload.account_conf_frontier, blocks.back ()->hash ());
-	ASSERT_EQ (response_payload.account_conf_height, blocks.size ());
+	ASSERT_EQ (response_payload.open, blocks.front ()->hash ());
+	ASSERT_EQ (response_payload.head, blocks.back ()->hash ());
+	ASSERT_EQ (response_payload.block_count, blocks.size ());
+	ASSERT_EQ (response_payload.conf_frontier, blocks.back ()->hash ());
+	ASSERT_EQ (response_payload.conf_height, blocks.size ());
 
 	// Ensure we don't get any unexpected responses
 	ASSERT_ALWAYS (1s, responses.size () == 1);
@@ -417,11 +417,11 @@ TEST (bootstrap_server, serve_account_info_missing)
 	ASSERT_NO_THROW (response_payload = std::get<nano::asc_pull_ack::account_info_payload> (response.payload));
 
 	ASSERT_EQ (response_payload.account, request_payload.target.as_account ());
-	ASSERT_EQ (response_payload.account_open, 0);
-	ASSERT_EQ (response_payload.account_head, 0);
-	ASSERT_EQ (response_payload.account_block_count, 0);
-	ASSERT_EQ (response_payload.account_conf_frontier, 0);
-	ASSERT_EQ (response_payload.account_conf_height, 0);
+	ASSERT_EQ (response_payload.open, 0);
+	ASSERT_EQ (response_payload.head, 0);
+	ASSERT_EQ (response_payload.block_count, 0);
+	ASSERT_EQ (response_payload.conf_frontier, 0);
+	ASSERT_EQ (response_payload.conf_height, 0);
 
 	// Ensure we don't get any unexpected responses
 	ASSERT_ALWAYS (1s, responses.size () == 1);

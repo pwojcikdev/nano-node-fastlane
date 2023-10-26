@@ -297,15 +297,15 @@ nano::asc_pull_ack nano::bootstrap_server::process (const store::transaction & t
 	auto account_info = ledger.account_info (transaction, target);
 	if (account_info)
 	{
-		response_payload.account_open = account_info->open_block;
-		response_payload.account_head = account_info->head;
-		response_payload.account_block_count = account_info->block_count;
+		response_payload.open = account_info->open_block;
+		response_payload.head = account_info->head;
+		response_payload.block_count = account_info->block_count;
 
 		auto conf_info = store.confirmation_height.get (transaction, target);
 		if (conf_info)
 		{
-			response_payload.account_conf_frontier = conf_info->frontier;
-			response_payload.account_conf_height = conf_info->height;
+			response_payload.conf_frontier = conf_info->frontier;
+			response_payload.conf_height = conf_info->height;
 		}
 	}
 	// If account is missing the response payload will contain all 0 fields, except for the target
