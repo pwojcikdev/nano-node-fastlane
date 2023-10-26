@@ -38,22 +38,22 @@ nano::network::network (nano::node & node_a, uint16_t port_a) :
 			}
 			catch (boost::system::error_code & ec)
 			{
-				node.nlogger.critical (nano::log::tag::network, "Error: {}", ec.message ());
+				node.nlogger.critical (nano::log::type::network, "Error: {}", ec.message ());
 				release_assert (false);
 			}
 			catch (std::error_code & ec)
 			{
-				node.nlogger.critical (nano::log::tag::network, "Error: {}", ec.message ());
+				node.nlogger.critical (nano::log::type::network, "Error: {}", ec.message ());
 				release_assert (false);
 			}
 			catch (std::runtime_error & err)
 			{
-				node.nlogger.critical (nano::log::tag::network, "Error: {}", err.what ());
+				node.nlogger.critical (nano::log::type::network, "Error: {}", err.what ());
 				release_assert (false);
 			}
 			catch (...)
 			{
-				node.nlogger.critical (nano::log::tag::network, "Unknown error");
+				node.nlogger.critical (nano::log::type::network, "Unknown error");
 				release_assert (false);
 			}
 		});
@@ -127,7 +127,7 @@ void nano::network::send_node_id_handshake (std::shared_ptr<nano::transport::cha
 
 	nano::node_id_handshake message{ node.network_params.network, query, response };
 
-	node.nlogger.debug (nano::log::tag::network, "Node ID handshake sent to: {} (query: {}, respond to: {}, signature: {})",
+	node.nlogger.debug (nano::log::type::network, "Node ID handshake sent to: {} (query: {}, respond to: {}, signature: {})",
 	nano::util::to_str (channel_a->get_endpoint ()),
 	(query ? query->cookie.to_string () : "<none>"),
 	(respond_to ? respond_to->to_string () : "<none>"),
@@ -473,7 +473,7 @@ private:
 void nano::network::process_message (nano::message const & message, std::shared_ptr<nano::transport::channel> const & channel)
 {
 	node.stats.inc (nano::stat::type::message, nano::to_stat_detail (message.type ()), nano::stat::dir::in);
-	node.nlogger.trace (nano::log::tag::network_processed, nano::to_log_detail (message.type ()), nlogger::arg{ "message", message });
+	node.nlogger.trace (nano::log::type::network_processed, nano::to_log_detail (message.type ()), nlogger::arg{ "message", message });
 
 	network_message_visitor visitor{ node, channel };
 	message.visit (visitor);

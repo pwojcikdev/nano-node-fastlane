@@ -36,7 +36,7 @@ nano::nlogger::nlogger ()
 {
 }
 
-spdlog::logger & nano::nlogger::get_logger (nano::log::tag tag)
+spdlog::logger & nano::nlogger::get_logger (nano::log::type tag)
 {
 	// This is a two-step process to avoid locking the mutex in the common case
 	{
@@ -56,7 +56,7 @@ spdlog::logger & nano::nlogger::get_logger (nano::log::tag tag)
 	}
 }
 
-std::shared_ptr<spdlog::logger> nano::nlogger::make_logger (nano::log::tag tag)
+std::shared_ptr<spdlog::logger> nano::nlogger::make_logger (nano::log::type tag)
 {
 	debug_assert (initialized.load (), "logging must be initialized before using nlogger");
 

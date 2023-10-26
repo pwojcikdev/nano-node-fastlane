@@ -246,7 +246,7 @@ bool nano::election::transition_time (nano::confirmation_solicitor & solicitor_a
 		{
 			// TODO: Log votes tally
 			// Only log root because we're holding a lock
-			node.nlogger.trace (nano::log::tag::election, nano::log::detail::election_expired, nano::nlogger::arg{ "root", qualified_root });
+			node.nlogger.trace (nano::log::type::election, nano::log::detail::election_expired, nano::nlogger::arg{ "root", qualified_root });
 
 			result = true; // Return true to indicate this election should be cleaned up
 			status.type = nano::election_status_type::stopped;
@@ -372,7 +372,7 @@ void nano::election::confirm_if_quorum (nano::unique_lock<nano::mutex> & lock_a)
 		{
 			// TODO: Log votes tally
 			// Only log root because we're holding a lock
-			node.nlogger.trace (nano::log::tag::election, nano::log::detail::election_confirmed, nano::nlogger::arg{ "root", qualified_root });
+			node.nlogger.trace (nano::log::type::election, nano::log::detail::election_confirmed, nano::nlogger::arg{ "root", qualified_root });
 
 			confirm_once (lock_a, nano::election_status_type::active_confirmed_quorum);
 		}
@@ -546,7 +546,7 @@ void nano::election::broadcast_vote_impl ()
 		if (confirmed () || have_quorum (tally_impl ()))
 		{
 			node.stats.inc (nano::stat::type::election, nano::stat::detail::broadcast_vote_final);
-			node.nlogger.trace (nano::log::tag::election, nano::log::detail::broadcast_vote,
+			node.nlogger.trace (nano::log::type::election, nano::log::detail::broadcast_vote,
 			nano::nlogger::arg{ "id", id },
 			nano::nlogger::arg{ "root", qualified_root },
 			nano::nlogger::arg{ "winner", status.winner },
@@ -557,7 +557,7 @@ void nano::election::broadcast_vote_impl ()
 		else
 		{
 			node.stats.inc (nano::stat::type::election, nano::stat::detail::broadcast_vote_normal);
-			node.nlogger.trace (nano::log::tag::election, nano::log::detail::broadcast_vote,
+			node.nlogger.trace (nano::log::type::election, nano::log::detail::broadcast_vote,
 			nano::nlogger::arg{ "id", id },
 			nano::nlogger::arg{ "root", qualified_root },
 			nano::nlogger::arg{ "winner", status.winner },

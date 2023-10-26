@@ -199,7 +199,7 @@ void nano::vote_generator::process (store::write_transaction const & transaction
 		should_vote = block != nullptr && ledger.dependents_confirmed (transaction, *block);
 	}
 
-	nlogger.trace (nano::log::tag::vote_generator, nano::log::detail::candidate_processed,
+	nlogger.trace (nano::log::type::vote_generator, nano::log::detail::candidate_processed,
 	nano::nlogger::arg{ "block", block },
 	nano::nlogger::arg{ "should_vote", should_vote },
 	nano::nlogger::arg{ "is_final", is_final });
