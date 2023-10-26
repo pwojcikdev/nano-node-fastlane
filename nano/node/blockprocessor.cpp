@@ -7,7 +7,6 @@
 #include <boost/format.hpp>
 
 nano::block_processor::block_processor (nano::node & node_a, nano::write_database_queue & write_database_queue_a) :
-	next_log (std::chrono::steady_clock::now ()),
 	node (node_a),
 	write_database_queue (write_database_queue_a),
 	state_block_signature_verification (node.checker, node.ledger.constants.epochs, node.config, node.nlogger, node.flags.block_processor_verification_size)
@@ -184,18 +183,6 @@ void nano::block_processor::process_blocks ()
 	}
 }
 
-bool nano::block_processor::should_log ()
-{
-	auto result (false);
-	auto now (std::chrono::steady_clock::now ());
-	if (next_log < now)
-	{
-		next_log = now + std::chrono::seconds (15);
-		result = true;
-	}
-	return result;
-}
-
 bool nano::block_processor::have_blocks_ready ()
 {
 	debug_assert (!mutex.try_lock ());
@@ -272,8 +259,7 @@ auto nano::block_processor::process_batch (nano::unique_lock<nano::mutex> & lock
 	auto store_batch_reached = [&number_of_blocks_processed, max = node.store.max_block_write_batch_num ()] { return number_of_blocks_processed >= max; };
 	while (have_blocks_ready () && (!deadline_reached () || !processor_batch_reached ()) && !store_batch_reached ())
 	{
-		// TODO: Cleaner periodical logging
-		if ((blocks.size () + state_block_signature_verification.size () + forced.size () > 64) && should_log ())
+		if ((blocks.size () + state_block_signature_verification.size () + forced.size () > 64) && log_interval.should_log ())
 		{
 			node.nlogger.debug (nano::log::type::blockprocessor, "{} blocks (+ {} state blocks) (+ {} forced) in processing queue", blocks.size (), state_block_signature_verification.size (), forced.size ());
 		}

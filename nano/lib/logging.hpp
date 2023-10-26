@@ -122,4 +122,31 @@ void initialize (nano::logging::config);
  * Cleanly shutdown logging (flush buffers, release file handles, etc)
  */
 void release ();
+
+class interval final
+{
+public:
+	explicit interval (std::chrono::seconds target_a) :
+		target{ target_a }
+	{
+	}
+
+	bool should_log ()
+	{
+		std::lock_guard guard{ mutex };
+
+		auto now = std::chrono::steady_clock::now ();
+		if (now - last_log > target)
+		{
+			last_log = now;
+			return true;
+		}
+		return false;
+	}
+
+private:
+	const std::chrono::seconds target;
+	std::chrono::steady_clock::time_point last_log;
+	mutable std::mutex mutex;
+};
 }

@@ -37,7 +37,6 @@ public:
 	void add (std::shared_ptr<nano::block> const &);
 	std::optional<nano::process_return> add_blocking (std::shared_ptr<nano::block> const & block);
 	void force (std::shared_ptr<nano::block> const &);
-	bool should_log ();
 	bool have_blocks_ready ();
 	bool have_blocks ();
 	void process_blocks ();
@@ -64,7 +63,6 @@ private:
 	void add_impl (std::shared_ptr<nano::block> block);
 	bool stopped{ false };
 	bool active{ false };
-	std::chrono::steady_clock::time_point next_log;
 	std::deque<std::shared_ptr<nano::block>> blocks;
 	std::deque<std::shared_ptr<nano::block>> forced;
 	nano::condition_variable condition;
@@ -73,6 +71,7 @@ private:
 	nano::mutex mutex{ mutex_identifier (mutexes::block_processor) };
 	nano::state_block_signature_verification state_block_signature_verification;
 	std::thread processing_thread;
+	nano::logging::interval log_interval{ std::chrono::seconds{ 15 } };
 
 	friend std::unique_ptr<container_info_component> collect_container_info (block_processor & block_processor, std::string const & name);
 };
