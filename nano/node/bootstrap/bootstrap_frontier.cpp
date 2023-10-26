@@ -137,7 +137,7 @@ void nano::frontier_req_client::received_frontier (boost::system::error_code con
 			return;
 		}
 
-		if (attempt->should_log ())
+		if (attempt->log_interval.elapsed ())
 		{
 			node->nlogger.debug (nano::log::type::frontier_req_client, "Received {} frontiers from {}", count, connection->channel->to_string ());
 		}

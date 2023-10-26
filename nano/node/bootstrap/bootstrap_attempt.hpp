@@ -30,7 +30,6 @@ public:
 	bool still_pulling ();
 	void pull_started ();
 	void pull_finished ();
-	bool should_log ();
 	char const * mode_text ();
 	virtual bool process_block (std::shared_ptr<nano::block> const &, nano::account const &, uint64_t, nano::bulk_pull::count_t, bool, unsigned);
 	virtual void get_information (boost::property_tree::ptree &) = 0;
@@ -50,5 +49,6 @@ public:
 	nano::bootstrap_mode mode;
 	nano::mutex mutex;
 	nano::condition_variable condition;
+	nano::interval_mt log_interval{ std::chrono::seconds (15) };
 };
 }
