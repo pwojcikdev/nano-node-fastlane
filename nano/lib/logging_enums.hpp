@@ -142,13 +142,6 @@ enum class detail
 	bulk_pull_account,
 
 };
-
-enum class preset
-{
-	cli,
-	daemon,
-	tests,
-};
 }
 
 namespace nano

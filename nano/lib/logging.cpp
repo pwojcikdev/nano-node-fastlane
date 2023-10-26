@@ -10,31 +10,10 @@ namespace
 std::atomic<bool> initialized{ false };
 }
 
-void nano::initialize_logging (nano::log::preset preset)
+void nano::logging::initialize (nano::logging::config config)
 {
 	spdlog::set_automatic_registration (false);
-
-	switch (preset)
-	{
-		case log::preset::cli:
-		{
-			// Only display critical errors when using node CLI
-			spdlog::set_level (spdlog::level::critical);
-		}
-		break;
-		case log::preset::daemon:
-		{
-			spdlog::set_level (spdlog::level::info);
-		}
-		break;
-		case log::preset::tests:
-		{
-			// Avoid cluttering the test runner output
-			spdlog::set_level (spdlog::level::critical);
-		}
-		break;
-	}
-
+	spdlog::set_level (to_spdlog_level (config.default_level));
 	spdlog::cfg::load_env_levels ();
 
 	//	auto logger = spdlog::basic_logger_mt ("default", "nano_log.txt");
@@ -42,6 +21,11 @@ void nano::initialize_logging (nano::log::preset preset)
 	spdlog::set_default_logger (logger);
 
 	initialized = true;
+}
+
+void nano::logging::release ()
+{
+	// TODO
 }
 
 /*
@@ -74,7 +58,7 @@ spdlog::logger & nano::nlogger::get_logger (nano::log::tag tag)
 
 std::shared_ptr<spdlog::logger> nano::nlogger::make_logger (nano::log::tag tag)
 {
-	debug_assert (initialized.load (), "nano::initialize_logging must be called before using nano::nlogger");
+	debug_assert (initialized.load (), "logging must be initialized before using nlogger");
 
 	auto const & sinks = spdlog::default_logger ()->sinks ();
 	auto spd_logger = std::make_shared<spdlog::logger> (std::string{ nano::to_string (tag) }, sinks.begin (), sinks.end ());
@@ -82,7 +66,7 @@ std::shared_ptr<spdlog::logger> nano::nlogger::make_logger (nano::log::tag tag)
 	return spd_logger;
 }
 
-spdlog::level::level_enum nano::nlogger::to_spd_level (nano::log::level level)
+spdlog::level::level_enum nano::to_spdlog_level (nano::log::level level)
 {
 	switch (level)
 	{
@@ -100,8 +84,32 @@ spdlog::level::level_enum nano::nlogger::to_spd_level (nano::log::level level)
 			return spdlog::level::debug;
 		case nano::log::level::trace:
 			return spdlog::level::trace;
-		default:
-			debug_assert (false);
-			return spdlog::level::off;
 	}
+	debug_assert (false);
+	return spdlog::level::off;
+}
+
+/*
+ * logging_config
+ */
+
+nano::logging::config nano::logging::config::cli_default ()
+{
+	nano::logging::config logging_config;
+	logging_config.default_level = nano::log::level::critical;
+	return logging_config;
+}
+
+nano::logging::config nano::logging::config::daemon_default ()
+{
+	nano::logging::config logging_config;
+	logging_config.default_level = nano::log::level::info;
+	return logging_config;
+}
+
+nano::logging::config nano::logging::config::tests_default ()
+{
+	nano::logging::config logging_config;
+	logging_config.default_level = nano::log::level::critical;
+	return logging_config;
 }
