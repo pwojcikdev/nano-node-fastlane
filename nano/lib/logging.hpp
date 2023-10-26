@@ -71,13 +71,6 @@ public:
 		}
 	};
 
-public: // trace
-	template <class T>
-	static arg<T> field (std::string_view name, T const & value)
-	{
-		return { name, value };
-	}
-
 	template <typename... Args>
 	void trace (nano::log::tag tag, nano::log::detail detail, Args &&... args)
 	{
