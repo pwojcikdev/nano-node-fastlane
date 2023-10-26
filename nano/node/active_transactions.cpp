@@ -324,7 +324,7 @@ void nano::active_transactions::cleanup_election (nano::unique_lock<nano::mutex>
 	lock_a.unlock ();
 
 	node.stats.inc (completion_type (*election), nano::to_stat_detail (election->behavior ()));
-	node.nlogger.trace (nano::log::tag::active_transactions, nano::log::detail::active_stopped, nano::nlogger::arg{ "election", election });
+	node.nlogger.trace (nano::log::type::active_transactions, nano::log::detail::active_stopped, nano::nlogger::arg{ "election", election });
 
 	vacancy_update ();
 
@@ -459,7 +459,7 @@ nano::election_insertion_result nano::active_transactions::insert_impl (nano::un
 				}
 
 				node.stats.inc (nano::stat::type::active_started, nano::to_stat_detail (election_behavior_a));
-				node.nlogger.trace (nano::log::tag::active_transactions, nano::log::detail::active_started, nano::nlogger::arg{ "election", result.election });
+				node.nlogger.trace (nano::log::type::active_transactions, nano::log::detail::active_started, nano::nlogger::arg{ "election", result.election });
 
 				node.observers.active_started.notify (hash);
 

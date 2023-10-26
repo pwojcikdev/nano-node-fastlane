@@ -23,7 +23,7 @@ void nano::transport::channel::send (nano::message & message_a, std::function<vo
 
 	bool send = !is_droppable_by_limiter || should_pass;
 
-	node.nlogger.trace (nano::log::tag::channel_send, nano::to_log_detail (message_a.type ()),
+	node.nlogger.trace (nano::log::type::channel_send, nano::to_log_detail (message_a.type ()),
 	nano::nlogger::arg{ "message", message_a },
 	nano::nlogger::arg{ "channel", *this },
 	nano::nlogger::arg{ "dropped", !send },
@@ -38,7 +38,7 @@ void nano::transport::channel::send (nano::message & message_a, std::function<vo
 		node.stats.inc (nano::stat::type::message, detail, nano::stat::dir::out);
 
 		auto cbk = [callback_a, node_s = node.shared (), type = message_a.type (), id = buffer.id] (boost::system::error_code const & ec, std::size_t size_a) {
-			node_s->nlogger.trace (nano::log::tag::channel_send_result, nano::to_log_detail (type),
+			node_s->nlogger.trace (nano::log::type::channel_send_result, nano::to_log_detail (type),
 			nano::nlogger::arg{ "error", ec },
 			nano::nlogger::arg{ "error_msg", ec.message () },
 			nano::nlogger::arg{ "size", size_a },

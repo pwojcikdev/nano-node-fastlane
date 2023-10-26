@@ -56,7 +56,7 @@ bool nano::scheduler::priority::activate (nano::account const & account_a, store
 				auto const balance_priority = std::max (balance, previous_balance);
 
 				node.stats.inc (nano::stat::type::election_scheduler, nano::stat::detail::activated);
-				node.nlogger.trace (nano::log::tag::election_scheduler, nano::log::detail::block_activated,
+				node.nlogger.trace (nano::log::type::election_scheduler, nano::log::detail::block_activated,
 				nano::nlogger::arg{ "account", account_a.to_account () },
 				nano::nlogger::arg{ "block", block },
 				nano::nlogger::arg{ "time", info->modified },

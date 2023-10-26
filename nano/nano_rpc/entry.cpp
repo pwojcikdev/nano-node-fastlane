@@ -25,7 +25,7 @@ void run (std::filesystem::path const & data_path, std::vector<std::string> cons
 {
 	nano::logging::initialize (nano::logging::config::daemon_default ());
 
-	nlogger.info (nano::log::tag::daemon, "Daemon started (RPC)");
+	nlogger.info (nano::log::type::daemon, "Daemon started (RPC)");
 
 	std::filesystem::create_directories (data_path);
 	boost::system::error_code error_chmod;
@@ -41,7 +41,7 @@ void run (std::filesystem::path const & data_path, std::vector<std::string> cons
 		error = nano::read_tls_config_toml (data_path, *tls_config, nlogger);
 		if (error)
 		{
-			nlogger.critical (nano::log::tag::daemon, "Error reading RPC TLS config: {}", error.get_message ());
+			nlogger.critical (nano::log::type::daemon, "Error reading RPC TLS config: {}", error.get_message ());
 			std::exit (1);
 		}
 		else
@@ -76,12 +76,12 @@ void run (std::filesystem::path const & data_path, std::vector<std::string> cons
 		}
 		catch (std::runtime_error const & e)
 		{
-			nlogger.critical (nano::log::tag::daemon, "Error while running RPC: {}", e.what ());
+			nlogger.critical (nano::log::type::daemon, "Error while running RPC: {}", e.what ());
 		}
 	}
 	else
 	{
-		nlogger.critical (nano::log::tag::daemon, "Error deserializing config: {}", error.get_message ());
+		nlogger.critical (nano::log::type::daemon, "Error deserializing config: {}", error.get_message ());
 	}
 }
 }
