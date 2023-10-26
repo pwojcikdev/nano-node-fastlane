@@ -84,7 +84,7 @@ void nano::bulk_pull_client::request ()
 	nano::nlogger::arg{ "account_or_head", pull.account_or_head },
 	nano::nlogger::arg{ "channel", connection->channel });
 
-	if (attempt->should_log ())
+	if (attempt->log_interval.should_log ())
 	{
 		node->nlogger.debug (nano::log::type::bulk_pull_client, "Accounts in pull queue: {}", attempt->pulling.load ());
 	}
@@ -242,7 +242,7 @@ void nano::bulk_pull_account_client::request ()
 	nano::nlogger::arg{ "account", req.account.to_account () },
 	nano::nlogger::arg{ "connection", connection->channel });
 
-	if (attempt->should_log ())
+	if (attempt->log_interval.should_log ())
 	{
 		node->nlogger.debug (nano::log::type::bulk_pull_account_client, "Accounts in pull queue: {}", attempt->wallet_size ());
 	}
