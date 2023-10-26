@@ -81,8 +81,8 @@ void nano::bulk_pull_client::request ()
 	req.set_count_present (pull.count != 0);
 
 	node->nlogger.trace (nano::log::tag::bulk_pull_client, nano::log::detail::requesting_account_or_head,
-	nano::nlogger::field ("account_or_head", pull.account_or_head),
-	nano::nlogger::field ("channel", connection->channel));
+	nano::nlogger::arg{ "account_or_head", pull.account_or_head },
+	nano::nlogger::arg{ "channel", connection->channel });
 
 	if (attempt->should_log ())
 	{
@@ -170,7 +170,7 @@ void nano::bulk_pull_client::received_block (boost::system::error_code ec, std::
 	}
 	auto hash = block->hash ();
 
-	node->nlogger.trace (nano::log::tag::bulk_pull_client, nano::log::detail::pulled_block, nano::nlogger::field ("block", block));
+	node->nlogger.trace (nano::log::tag::bulk_pull_client, nano::log::detail::pulled_block, nano::nlogger::arg{ "block", block });
 
 	// Is block expected?
 	bool block_expected (false);
@@ -695,14 +695,16 @@ void nano::bulk_pull_account_server::send_next_block ()
 		std::vector<uint8_t> send_buffer;
 		if (pending_address_only)
 		{
-			node->nlogger.trace (nano::log::tag::bulk_pull_account_server, nano::log::detail::sending_pending, nano::nlogger::field ("pending", block_info->source));
+			node->nlogger.trace (nano::log::tag::bulk_pull_account_server, nano::log::detail::sending_pending,
+			nano::nlogger::arg{ "pending", block_info->source });
 
 			nano::vectorstream output_stream (send_buffer);
 			write (output_stream, block_info->source.bytes);
 		}
 		else
 		{
-			node->nlogger.trace (nano::log::tag::bulk_pull_account_server, nano::log::detail::sending_block, nano::nlogger::field ("block", block_info_key->hash));
+			node->nlogger.trace (nano::log::tag::bulk_pull_account_server, nano::log::detail::sending_block,
+			nano::nlogger::arg{ "block", block_info_key->hash });
 
 			nano::vectorstream output_stream (send_buffer);
 			write (output_stream, block_info_key->hash.bytes);

@@ -267,9 +267,9 @@ nano::process_return nano::block_processor::process_one (store::write_transactio
 
 	node.stats.inc (nano::stat::type::blockprocessor, nano::to_stat_detail (result.code));
 	node.nlogger.trace (nano::log::tag::blockprocessor, nano::log::detail::block_processed,
-	nlogger::field ("result", result.code),
-	nlogger::field ("block", block),
-	nlogger::field ("forced", forced_a));
+	nano::nlogger::arg{ "result", result.code },
+	nano::nlogger::arg{ "block", block },
+	nano::nlogger::arg{ "forced", forced_a });
 
 	switch (result.code)
 	{

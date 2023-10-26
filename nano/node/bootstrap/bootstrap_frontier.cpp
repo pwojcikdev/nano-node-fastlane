@@ -276,9 +276,9 @@ void nano::frontier_req_server::send_next ()
 	if (!current.is_zero () && count < request->count)
 	{
 		node->nlogger.trace (nano::log::tag::frontier_req_server, nano::log::detail::sending_frontier,
-		nano::nlogger::field ("account", current.to_account ()),
-		nano::nlogger::field ("frontier", frontier),
-		nano::nlogger::field ("socket", connection->socket));
+		nano::nlogger::arg{ "account", current.to_account () },
+		nano::nlogger::arg{ "frontier", frontier },
+		nano::nlogger::arg{ "socket", connection->socket });
 
 		std::vector<uint8_t> send_buffer;
 		{

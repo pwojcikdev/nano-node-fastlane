@@ -469,7 +469,7 @@ private:
 void nano::network::process_message (nano::message const & message, std::shared_ptr<nano::transport::channel> const & channel)
 {
 	node.stats.inc (nano::stat::type::message, nano::to_stat_detail (message.type ()), nano::stat::dir::in);
-	node.nlogger.trace (nano::log::tag::network_processed, nano::to_log_detail (message.type ()), nlogger::field ("message", message));
+	node.nlogger.trace (nano::log::tag::network_processed, nano::to_log_detail (message.type ()), nlogger::arg{ "message", message });
 
 	network_message_visitor visitor{ node, channel };
 	message.visit (visitor);
