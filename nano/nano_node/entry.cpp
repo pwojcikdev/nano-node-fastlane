@@ -54,7 +54,7 @@ public:
 int main (int argc, char * const * argv)
 {
 	nano::set_umask ();
-	nano::initialize_logging ();
+	nano::logging::initialize (nano::logging::config::cli_default ());
 
 	nano::node_singleton_memory_pool_purge_guard memory_pool_cleanup_guard;
 

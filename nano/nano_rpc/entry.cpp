@@ -23,7 +23,7 @@ volatile sig_atomic_t sig_int_or_term = 0;
 
 void run (std::filesystem::path const & data_path, std::vector<std::string> const & config_overrides)
 {
-	nano::initialize_logging (nano::log::preset::daemon);
+	nano::logging::initialize (nano::logging::config::daemon_default ());
 
 	nlogger.info (nano::log::tag::daemon, "Daemon started (RPC)");
 
@@ -89,7 +89,7 @@ void run (std::filesystem::path const & data_path, std::vector<std::string> cons
 int main (int argc, char * const * argv)
 {
 	nano::set_umask ();
-	nano::initialize_logging ();
+	nano::logging::initialize (nano::logging::config::cli_default ());
 
 	boost::program_options::options_description description ("Command line options");
 
@@ -130,6 +130,8 @@ int main (int argc, char * const * argv)
 	std::filesystem::path data_path ((data_path_it != vm.end ()) ? std::filesystem::path (data_path_it->second.as<std::string> ()) : nano::working_path ());
 	if (vm.count ("daemon") > 0)
 	{
+		nano::logging::initialize (nano::logging::config::daemon_default ());
+
 		std::vector<std::string> config_overrides;
 		auto config (vm.find ("config"));
 		if (config != vm.end ())

@@ -12,6 +12,8 @@
 
 namespace nano
 {
+spdlog::level::level_enum to_spdlog_level (nano::log::level);
+
 class nlogger
 {
 public:
@@ -22,7 +24,7 @@ public: // logging
 	template <class... Args>
 	void log (nano::log::level level, nano::log::tag tag, spdlog::format_string_t<Args...> fmt, Args &&... args)
 	{
-		get_logger (tag).log (to_spd_level (level), fmt, std::forward<Args> (args)...);
+		get_logger (tag).log (to_spdlog_level (level), fmt, std::forward<Args> (args)...);
 	}
 
 	template <class... Args>
@@ -101,17 +103,30 @@ private:
 private:
 	spdlog::logger & get_logger (nano::log::tag tag);
 	std::shared_ptr<spdlog::logger> make_logger (nano::log::tag tag);
-
-	static spdlog::level::level_enum to_spd_level (nano::log::level);
 };
-
-void initialize_logging (nano::log::preset = nano::log::preset::cli);
 }
 
 namespace nano::logging
 {
-inline void release_file_sink ()
+class config final
 {
-	// TODO
-}
+public:
+public:
+	nano::log::level default_level{ nano::log::level::info };
+
+public:
+	static config cli_default ();
+	static config daemon_default ();
+	static config tests_default ();
+};
+
+/**
+ * Global initialization of logging that all loggers will use
+ */
+void initialize (nano::logging::config);
+
+/**
+ * Cleanly shutdown logging (flush buffers, release file handles, etc)
+ */
+void release ();
 }
