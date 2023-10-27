@@ -71,7 +71,7 @@ private:
 	nano::mutex mutex{ mutex_identifier (mutexes::block_processor) };
 	nano::state_block_signature_verification state_block_signature_verification;
 	std::thread processing_thread;
-	nano::logging::interval log_interval{ std::chrono::seconds{ 15 } };
+	nano::logging_interval log_interval{ std::chrono::seconds{ 15 } };
 
 	friend std::unique_ptr<container_info_component> collect_container_info (block_processor & block_processor, std::string const & name);
 };
