@@ -49,6 +49,6 @@ public:
 	nano::bootstrap_mode mode;
 	nano::mutex mutex;
 	nano::condition_variable condition;
-	nano::logging::interval log_interval{ std::chrono::seconds (15) };
+	nano::logging_interval log_interval{ std::chrono::seconds (15) };
 };
 }

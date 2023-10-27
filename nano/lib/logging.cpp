@@ -5,15 +5,20 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-namespace
+/*
+ * nlogger
+ */
+
+std::mutex nano::nlogger::initialization_mutex;
+bool nano::nlogger::initialized{ false };
+
+nano::nlogger::nlogger ()
 {
-std::mutex logging_mutex;
-std::atomic<bool> logging_initialized{ false };
 }
 
-void nano::logging::initialize (nano::logging::config config)
+void nano::nlogger::initialize (const nano::logging_config & config)
 {
-	std::lock_guard guard{ logging_mutex };
+	std::lock_guard guard{ initialization_mutex };
 
 	spdlog::set_automatic_registration (false);
 	spdlog::set_level (to_spdlog_level (config.default_level));
@@ -23,19 +28,10 @@ void nano::logging::initialize (nano::logging::config config)
 	auto logger = spdlog::stdout_color_mt ("default");
 	spdlog::set_default_logger (logger);
 
-	logging_initialized = true;
+	initialized = true;
 }
 
-void nano::logging::release ()
-{
-	// TODO
-}
-
-/*
- * nlogger
- */
-
-nano::nlogger::nlogger ()
+void nano::nlogger::release ()
 {
 }
 
@@ -61,19 +57,19 @@ spdlog::logger & nano::nlogger::get_logger (nano::log::type tag)
 
 std::shared_ptr<spdlog::logger> nano::nlogger::make_logger (nano::log::type tag)
 {
-	std::lock_guard guard{ logging_mutex };
+	std::lock_guard guard{ initialization_mutex };
 
-	debug_assert (logging_initialized.load (), "logging must be initialized before using nlogger");
+	debug_assert (initialized, "logging must be initialized before using nlogger");
 
 	auto const default_logger = spdlog::default_logger ();
 	auto const & sinks = default_logger->sinks ();
-	
+
 	auto spd_logger = std::make_shared<spdlog::logger> (std::string{ nano::to_string (tag) }, sinks.begin (), sinks.end ());
 	spdlog::initialize_logger (spd_logger);
 	return spd_logger;
 }
 
-spdlog::level::level_enum nano::to_spdlog_level (nano::log::level level)
+spdlog::level::level_enum nano::nlogger::to_spdlog_level (nano::log::level level)
 {
 	switch (level)
 	{
@@ -100,23 +96,23 @@ spdlog::level::level_enum nano::to_spdlog_level (nano::log::level level)
  * logging_config
  */
 
-nano::logging::config nano::logging::config::cli_default ()
+nano::logging_config nano::logging_config::cli_default ()
 {
-	nano::logging::config logging_config;
-	logging_config.default_level = nano::log::level::critical;
-	return logging_config;
+	logging_config config;
+	config.default_level = nano::log::level::critical;
+	return config;
 }
 
-nano::logging::config nano::logging::config::daemon_default ()
+nano::logging_config nano::logging_config::daemon_default ()
 {
-	nano::logging::config logging_config;
-	logging_config.default_level = nano::log::level::info;
-	return logging_config;
+	logging_config config;
+	config.default_level = nano::log::level::info;
+	return config;
 }
 
-nano::logging::config nano::logging::config::tests_default ()
+nano::logging_config nano::logging_config::tests_default ()
 {
-	nano::logging::config logging_config;
-	logging_config.default_level = nano::log::level::critical;
-	return logging_config;
+	logging_config config;
+	config.default_level = nano::log::level::critical;
+	return config;
 }
