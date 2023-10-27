@@ -7,11 +7,14 @@
 
 namespace
 {
-std::atomic<bool> initialized{ false };
+std::mutex logging_mutex;
+std::atomic<bool> logging_initialized{ false };
 }
 
 void nano::logging::initialize (nano::logging::config config)
 {
+	std::lock_guard guard{ logging_mutex };
+
 	spdlog::set_automatic_registration (false);
 	spdlog::set_level (to_spdlog_level (config.default_level));
 	spdlog::cfg::load_env_levels ();
@@ -20,7 +23,7 @@ void nano::logging::initialize (nano::logging::config config)
 	auto logger = spdlog::stdout_color_mt ("default");
 	spdlog::set_default_logger (logger);
 
-	initialized = true;
+	logging_initialized = true;
 }
 
 void nano::logging::release ()
@@ -58,9 +61,13 @@ spdlog::logger & nano::nlogger::get_logger (nano::log::type tag)
 
 std::shared_ptr<spdlog::logger> nano::nlogger::make_logger (nano::log::type tag)
 {
-	debug_assert (initialized.load (), "logging must be initialized before using nlogger");
+	std::lock_guard guard{ logging_mutex };
 
-	auto const & sinks = spdlog::default_logger ()->sinks ();
+	debug_assert (logging_initialized.load (), "logging must be initialized before using nlogger");
+
+	auto const default_logger = spdlog::default_logger ();
+	auto const & sinks = default_logger->sinks ();
+	
 	auto spd_logger = std::make_shared<spdlog::logger> (std::string{ nano::to_string (tag) }, sinks.begin (), sinks.end ());
 	spdlog::initialize_logger (spd_logger);
 	return spd_logger;
