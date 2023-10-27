@@ -12,14 +12,31 @@
 
 namespace nano
 {
-spdlog::level::level_enum to_spdlog_level (nano::log::level);
+class logging_config final
+{
+public:
+public:
+	nano::log::level default_level{ nano::log::level::info };
 
-class nlogger
+public:
+	static logging_config cli_default ();
+	static logging_config daemon_default ();
+	static logging_config tests_default ();
+};
+
+class nlogger final
 {
 public:
 	nlogger ();
 
 public:
+	static void initialize (nano::logging_config const &);
+	static void release ();
+
+private:
+	static bool initialized;
+	static std::mutex initialization_mutex;
+
 public: // logging
 	template <class... Args>
 	void log (nano::log::level level, nano::log::type tag, spdlog::format_string_t<Args...> fmt, Args &&... args)
@@ -96,30 +113,7 @@ private:
 private:
 	spdlog::logger & get_logger (nano::log::type tag);
 	std::shared_ptr<spdlog::logger> make_logger (nano::log::type tag);
+
+	static spdlog::level::level_enum to_spdlog_level (nano::log::level);
 };
-}
-
-namespace nano::logging
-{
-class config final
-{
-public:
-public:
-	nano::log::level default_level{ nano::log::level::info };
-
-public:
-	static config cli_default ();
-	static config daemon_default ();
-	static config tests_default ();
-};
-
-/**
- * Global initialization of logging that all loggers will use
- */
-void initialize (nano::logging::config);
-
-/**
- * Cleanly shutdown logging (flush buffers, release file handles, etc)
- */
-void release ();
 }
