@@ -2,6 +2,7 @@
 
 #include <nano/lib/logging_enums.hpp>
 #include <nano/lib/object_stream.hpp>
+#include <nano/lib/tomlconfig.hpp>
 
 #include <initializer_list>
 #include <memory>
@@ -15,8 +16,30 @@ namespace nano
 class logging_config final
 {
 public:
+	nano::error serialize_toml (nano::tomlconfig &) const;
+	nano::error deserialize_toml (nano::tomlconfig &);
+
 public:
 	nano::log::level default_level{ nano::log::level::info };
+
+	struct console_config
+	{
+		bool enable{ true };
+		bool colors{ true };
+		bool to_cerr{ false };
+	};
+
+	struct file_config
+	{
+		bool enable{ true };
+		std::size_t max_size{ 32 * 1024 * 1024 };
+		std::size_t rotation_count{ 4 };
+	};
+
+	console_config console;
+	file_config file;
+
+	// TODO: Per logger type levels
 
 public:
 	static logging_config cli_default ();

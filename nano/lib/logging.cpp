@@ -1,9 +1,12 @@
 #include <nano/lib/logging.hpp>
 #include <nano/lib/utility.hpp>
 
+#include <fmt/chrono.h>
 #include <spdlog/cfg/env.h>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/stdout_sinks.h>
 
 /*
  * nlogger
@@ -24,8 +27,62 @@ void nano::nlogger::initialize (const nano::logging_config & config)
 	spdlog::set_level (to_spdlog_level (config.default_level));
 	spdlog::cfg::load_env_levels ();
 
-	//	auto logger = spdlog::basic_logger_mt ("default", "nano_log.txt");
-	auto logger = spdlog::stdout_color_mt ("default");
+	std::vector<spdlog::sink_ptr> sinks;
+
+	// Console setup
+	if (config.console.enable)
+	{
+		if (!config.console.to_cerr)
+		{
+			// Only use colors if not writing to cerr
+			if (config.console.colors)
+			{
+				auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt> ();
+				sinks.push_back (console_sink);
+			}
+			else
+			{
+				auto console_sink = std::make_shared<spdlog::sinks::stdout_sink_mt> ();
+				sinks.push_back (console_sink);
+			}
+		}
+		else
+		{
+			auto cerr_sink = std::make_shared<spdlog::sinks::stderr_sink_mt> ();
+			sinks.push_back (cerr_sink);
+		}
+	}
+
+	// File setup
+	if (config.file.enable)
+	{
+		auto now = std::chrono::system_clock::now ();
+		auto time = std::chrono::system_clock::to_time_t (now);
+
+		auto filename = fmt::format ("log_{:%Y-%m-%d_%H-%M}-{:%S}", fmt::localtime (time), now.time_since_epoch ());
+		std::replace (filename.begin (), filename.end (), '.', '_'); // Replace millisecond dot separator with underscore
+
+		std::filesystem::path log_path{ "log" };
+		log_path /= filename + ".log";
+
+		std::cout << "Logging to file: " << log_path << std::endl;
+
+		// If either max_size or rotation_count is 0, then disable file rotation
+		if (config.file.max_size == 0 || config.file.rotation_count == 0)
+		{
+			// TODO: Maybe show a warning to the user about possibly unlimited log file size
+
+			auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt> (log_path, true);
+			sinks.push_back (file_sink);
+		}
+		else
+		{
+			auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt> (log_path, config.file.max_size, config.file.rotation_count);
+			sinks.push_back (file_sink);
+		}
+	}
+
+	auto logger = std::make_shared<spdlog::logger> ("default", sinks.begin (), sinks.end ());
 	spdlog::set_default_logger (logger);
 
 	initialized = true;
