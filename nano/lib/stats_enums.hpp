@@ -70,6 +70,7 @@ enum class detail : uint8_t
 	cleanup,
 	top,
 	unknown,
+	erase,
 
 	// processing queue
 	queue,
