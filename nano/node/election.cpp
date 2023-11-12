@@ -192,13 +192,35 @@ bool nano::election::failed () const
 	return state_m == nano::election::state_t::expired_unconfirmed;
 }
 
+bool nano::election::broadcast_block_predicate () const
+{
+	debug_assert (!mutex.try_lock ());
+
+	// Broadcast the block if enough time has passed since the last broadcast (or it's the first broadcast)
+	if (last_block + node.config.network_params.network.block_broadcast_interval < std::chrono::steady_clock::now ())
+	{
+		return true;
+	}
+	// Or the current election winner has changed
+	if (status.winner->hash () != last_block_hash)
+	{
+		return true;
+	}
+	return false;
+}
+
 void nano::election::broadcast_block (nano::confirmation_solicitor & solicitor_a)
 {
-	if (base_latency () * 15 < std::chrono::steady_clock::now () - last_block)
+	debug_assert (!mutex.try_lock ());
+
+	if (broadcast_block_predicate ())
 	{
 		if (!solicitor_a.broadcast (*this))
 		{
+			node.stats.inc (nano::stat::type::election, (last_block == std::chrono::steady_clock::time_point{}) ? nano::stat::detail::broadcast_block_initial : nano::stat::detail::broadcast_block_repeat);
+
 			last_block = std::chrono::steady_clock::now ();
+			last_block_hash = status.winner->hash ();
 		}
 	}
 }
