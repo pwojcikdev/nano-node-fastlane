@@ -262,9 +262,9 @@ TEST (bootstrap_ascending, config_serialization)
 	config1.requests_limit = 0x101;
 	config1.database_requests_limit = 0x102;
 	config1.pull_count = 0x103;
-	config1.timeout = 0x104;
+	config1.timeout = 0x104ms;
 	config1.throttle_coefficient = 0x105;
-	config1.throttle_wait = 0x106;
+	config1.throttle_wait = 0x106ms;
 	config1.block_wait_count = 0x107;
 	nano::tomlconfig toml1;
 	ASSERT_FALSE (config1.serialize (toml1));
