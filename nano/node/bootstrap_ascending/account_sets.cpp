@@ -1,6 +1,6 @@
 #include <nano/lib/stats.hpp>
+#include <nano/lib/tomlconfig.hpp>
 #include <nano/lib/utility.hpp>
-#include <nano/node/bootstrap/bootstrap_config.hpp>
 #include <nano/node/bootstrap_ascending/account_sets.hpp>
 
 #include <algorithm>
@@ -11,9 +11,9 @@
  * account_sets
  */
 
-nano::bootstrap_ascending::account_sets::account_sets (nano::stats & stats_a, nano::account_sets_config config_a) :
-	stats{ stats_a },
-	config{ std::move (config_a) }
+nano::bootstrap_ascending::account_sets::account_sets (account_sets_config const & config_a, nano::stats & stats_a) :
+	config{ config_a },
+	stats{ stats_a }
 {
 }
 
@@ -21,7 +21,7 @@ void nano::bootstrap_ascending::account_sets::priority_up (nano::account const &
 {
 	if (!blocked (account))
 	{
-		stats.inc (nano::stat::type::bootstrap_ascending_accounts, nano::stat::detail::prioritize);
+		stats.inc (nano::stat::type::ascendboot_account_sets, nano::stat::detail::prioritize);
 
 		auto iter = priorities.get<tag_account> ().find (account);
 		if (iter != priorities.get<tag_account> ().end ())
@@ -32,15 +32,17 @@ void nano::bootstrap_ascending::account_sets::priority_up (nano::account const &
 		}
 		else
 		{
-			priorities.get<tag_account> ().insert ({ account, account_sets::priority_initial });
-			stats.inc (nano::stat::type::bootstrap_ascending_accounts, nano::stat::detail::priority_insert);
+			auto [it, inserted] = priorities.get<tag_account> ().insert ({ account, account_sets::priority_initial });
+			debug_assert (inserted);
+
+			stats.inc (nano::stat::type::ascendboot_account_sets, nano::stat::detail::priority_insert);
 
 			trim_overflow ();
 		}
 	}
 	else
 	{
-		stats.inc (nano::stat::type::bootstrap_ascending_accounts, nano::stat::detail::prioritize_failed);
+		stats.inc (nano::stat::type::ascendboot_account_sets, nano::stat::detail::prioritize_failed);
 	}
 }
 
@@ -49,13 +51,13 @@ void nano::bootstrap_ascending::account_sets::priority_down (nano::account const
 	auto iter = priorities.get<tag_account> ().find (account);
 	if (iter != priorities.get<tag_account> ().end ())
 	{
-		stats.inc (nano::stat::type::bootstrap_ascending_accounts, nano::stat::detail::deprioritize);
+		stats.inc (nano::stat::type::ascendboot_account_sets, nano::stat::detail::deprioritize);
 
 		auto priority_new = iter->priority - account_sets::priority_decrease;
 		if (priority_new <= account_sets::priority_cutoff)
 		{
 			priorities.get<tag_account> ().erase (iter);
-			stats.inc (nano::stat::type::bootstrap_ascending_accounts, nano::stat::detail::priority_erase_threshold);
+			stats.inc (nano::stat::type::ascendboot_account_sets, nano::stat::detail::priority_erase_threshold);
 		}
 		else
 		{
@@ -66,22 +68,22 @@ void nano::bootstrap_ascending::account_sets::priority_down (nano::account const
 	}
 	else
 	{
-		stats.inc (nano::stat::type::bootstrap_ascending_accounts, nano::stat::detail::deprioritize_failed);
+		stats.inc (nano::stat::type::ascendboot_account_sets, nano::stat::detail::deprioritize_failed);
 	}
 }
 
 void nano::bootstrap_ascending::account_sets::block (nano::account const & account, nano::block_hash const & dependency)
 {
-	stats.inc (nano::stat::type::bootstrap_ascending_accounts, nano::stat::detail::block);
+	stats.inc (nano::stat::type::ascendboot_account_sets, nano::stat::detail::block);
 
 	auto existing = priorities.get<tag_account> ().find (account);
 	auto entry = existing == priorities.get<tag_account> ().end () ? priority_entry{ 0, 0 } : *existing;
 
 	priorities.get<tag_account> ().erase (account);
-	stats.inc (nano::stat::type::bootstrap_ascending_accounts, nano::stat::detail::priority_erase_block);
+	stats.inc (nano::stat::type::ascendboot_account_sets, nano::stat::detail::priority_erase_block);
 
 	blocking.get<tag_account> ().insert ({ account, dependency, entry });
-	stats.inc (nano::stat::type::bootstrap_ascending_accounts, nano::stat::detail::blocking_insert);
+	stats.inc (nano::stat::type::ascendboot_account_sets, nano::stat::detail::blocking_insert);
 
 	trim_overflow ();
 }
@@ -92,7 +94,7 @@ void nano::bootstrap_ascending::account_sets::unblock (nano::account const & acc
 	auto existing = blocking.get<tag_account> ().find (account);
 	if (existing != blocking.get<tag_account> ().end () && (!hash || existing->dependency == *hash))
 	{
-		stats.inc (nano::stat::type::bootstrap_ascending_accounts, nano::stat::detail::unblock);
+		stats.inc (nano::stat::type::ascendboot_account_sets, nano::stat::detail::unblock);
 
 		debug_assert (priorities.get<tag_account> ().count (account) == 0);
 		if (!existing->original_entry.account.is_zero ())
@@ -110,7 +112,7 @@ void nano::bootstrap_ascending::account_sets::unblock (nano::account const & acc
 	}
 	else
 	{
-		stats.inc (nano::stat::type::bootstrap_ascending_accounts, nano::stat::detail::unblock_failed);
+		stats.inc (nano::stat::type::ascendboot_account_sets, nano::stat::detail::unblock_failed);
 	}
 }
 
@@ -148,14 +150,14 @@ void nano::bootstrap_ascending::account_sets::trim_overflow ()
 		// Evict the lowest priority entry
 		priorities.get<tag_priority> ().erase (priorities.get<tag_priority> ().begin ());
 
-		stats.inc (nano::stat::type::bootstrap_ascending_accounts, nano::stat::detail::priority_erase_overflow);
+		stats.inc (nano::stat::type::ascendboot_account_sets, nano::stat::detail::priority_erase_overflow);
 	}
 	if (blocking.size () > config.blocking_max)
 	{
 		// Evict the lowest priority entry
 		blocking.get<tag_priority> ().erase (blocking.get<tag_priority> ().begin ());
 
-		stats.inc (nano::stat::type::bootstrap_ascending_accounts, nano::stat::detail::blocking_erase_overflow);
+		stats.inc (nano::stat::type::ascendboot_account_sets, nano::stat::detail::blocking_erase_overflow);
 	}
 }
 
@@ -252,4 +254,31 @@ nano::bootstrap_ascending::account_sets::priority_entry::priority_entry (nano::a
 	priority{ priority_a }
 {
 	id = nano::bootstrap_ascending::generate_id ();
+}
+
+/*
+ * account_sets_config
+ */
+
+nano::error nano::bootstrap_ascending::account_sets_config::deserialize (nano::tomlconfig & toml)
+{
+	toml.get ("consideration_count", consideration_count);
+	toml.get ("priorities_max", priorities_max);
+	toml.get ("blocking_max", blocking_max);
+
+	auto cooldown_l = cooldown.count ();
+	toml.get ("cooldown", cooldown_l);
+	cooldown = std::chrono::milliseconds{ cooldown_l };
+
+	return toml.get_error ();
+}
+
+nano::error nano::bootstrap_ascending::account_sets_config::serialize (nano::tomlconfig & toml) const
+{
+	toml.put ("consideration_count", consideration_count, "Limit the number of account candidates to consider and also the number of iterations.\ntype:uint64");
+	toml.put ("priorities_max", priorities_max, "Cutoff size limit for the priority list.\ntype:uint64");
+	toml.put ("blocking_max", blocking_max, "Cutoff size limit for the blocked accounts from the priority list.\ntype:uint64");
+	toml.put ("cooldown", cooldown.count (), "Waiting time for an account to become available.\ntype:milliseconds");
+
+	return toml.get_error ();
 }

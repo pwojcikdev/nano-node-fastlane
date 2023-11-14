@@ -5,12 +5,9 @@
 #include <nano/lib/observer_set.hpp>
 #include <nano/lib/timer.hpp>
 #include <nano/node/bandwidth_limiter.hpp>
-#include <nano/node/bootstrap/bootstrap_config.hpp>
-#include <nano/node/bootstrap_ascending/account_sets.hpp>
+#include <nano/node/bootstrap_ascending/account_scan.hpp>
 #include <nano/node/bootstrap_ascending/common.hpp>
-#include <nano/node/bootstrap_ascending/iterators.hpp>
 #include <nano/node/bootstrap_ascending/peer_scoring.hpp>
-#include <nano/node/bootstrap_ascending/throttle.hpp>
 #include <nano/node/bootstrap_server.hpp>
 
 #include <boost/multi_index/hashed_index.hpp>
@@ -37,7 +34,33 @@ namespace transport
 
 namespace nano::bootstrap_ascending
 {
-class service
+class lazy_pulling final
+{
+public:
+	class tag : public nano::bootstrap_ascending::tag_base<tag, nano::asc_pull_ack::account_info_payload>
+	{
+	};
+};
+
+class config final
+{
+public:
+	nano::error deserialize (nano::tomlconfig & toml);
+	nano::error serialize (nano::tomlconfig & toml) const;
+
+	// Maximum number of un-responded requests per channel
+	std::size_t requests_limit{ 64 };
+	std::size_t database_rate_limit{ 1024 };
+	std::size_t pull_count{ nano::bootstrap_server::max_blocks };
+	std::chrono::milliseconds timeout{ 1000 * 3 };
+	std::size_t throttle_coefficient{ 16 };
+	std::chrono::milliseconds throttle_wait{ 100 };
+	std::size_t block_wait_count{ 1000 };
+
+	account_sets_config account_sets;
+};
+
+class service final
 {
 public:
 	service (nano::node_config &, nano::block_processor &, nano::ledger &, nano::network &, nano::stats &);
@@ -49,12 +72,10 @@ public:
 	/**
 	 * Process `asc_pull_ack` message coming from network
 	 */
-	void process (nano::asc_pull_ack const & message, std::shared_ptr<nano::transport::channel> channel);
+	void process (nano::asc_pull_ack const & message, std::shared_ptr<nano::transport::channel> const & channel);
 
-public: // Container info
+public: // Info
 	std::unique_ptr<nano::container_info_component> collect_container_info (std::string const & name);
-	std::size_t blocked_size () const;
-	std::size_t priority_size () const;
 	std::size_t score_size () const;
 
 private: // Dependencies
@@ -65,22 +86,23 @@ private: // Dependencies
 	nano::network & network;
 	nano::stats & stats;
 
-public: // async_tag
+public: // Strategies
+	nano::bootstrap_ascending::account_scan account_scan;
+	nano::bootstrap_ascending::lazy_pulling lazy_pulling;
+
+	using tag_strategy_variant = std::variant<account_scan::tag, lazy_pulling::tag>;
+
+	bool request (tag_strategy_variant const &, nano::asc_pull_req::payload_variant const &);
+
+	/* Throttles requesting new blocks, not to overwhelm blockprocessor */
+	void wait_blockprocessor ();
+
+public: // Tag
 	struct async_tag
 	{
-		enum class query_type
-		{
-			invalid = 0, // Default initialization
-			blocks_by_hash,
-			blocks_by_account,
-			// TODO: account_info,
-		};
-
-		query_type type{ query_type::invalid };
+		tag_strategy_variant strategy;
 		nano::bootstrap_ascending::id_t id{ 0 };
-		nano::hash_or_account start{ 0 };
 		std::chrono::steady_clock::time_point time{};
-		nano::account account{ 0 };
 	};
 
 public: // Events
@@ -89,56 +111,17 @@ public: // Events
 	nano::observer_set<async_tag const &> on_timeout;
 
 private:
-	/* Inspects a block that has been processed by the block processor */
-	void inspect (store::transaction const &, nano::process_return const & result, nano::block const & block);
-
-	void throttle_if_needed (nano::unique_lock<nano::mutex> & lock);
 	void run ();
-	bool run_one ();
-	void run_timeouts ();
-
-	/* Throttles requesting new blocks, not to overwhelm blockprocessor */
-	void wait_blockprocessor ();
-	/* Waits for channel with free capacity for bootstrap messages */
-	std::shared_ptr<nano::transport::channel> wait_available_channel ();
-	/* Waits until a suitable account outside of cool down period is available */
-	nano::account available_account ();
-	nano::account wait_available_account ();
-
-	bool request (nano::account &, std::shared_ptr<nano::transport::channel> &);
-	void send (std::shared_ptr<nano::transport::channel>, async_tag tag);
 	void track (async_tag const & tag);
 
-	void process (nano::asc_pull_ack::blocks_payload const & response, async_tag const & tag);
-	void process (nano::asc_pull_ack::account_info_payload const & response, async_tag const & tag);
-	void process (nano::asc_pull_ack::frontiers_payload const & response, async_tag const & tag);
-	void process (nano::empty_payload const & response, async_tag const & tag);
+	/* Waits for channel with free capacity for bootstrap messages */
+	std::shared_ptr<nano::transport::channel> wait_available_channel ();
 
-	enum class verify_result
-	{
-		ok,
-		nothing_new,
-		invalid,
-	};
-
-	/**
-	 * Verifies whether the received response is valid. Returns:
-	 * - invalid: when received blocks do not correspond to requested hash/account or they do not make a valid chain
-	 * - nothing_new: when received response indicates that the account chain does not have more blocks
-	 * - ok: otherwise, if all checks pass
-	 */
-	verify_result verify (nano::asc_pull_ack::blocks_payload const & response, async_tag const & tag) const;
-
-public: // account_sets
-	nano::bootstrap_ascending::account_sets::info_t info () const;
+public:
+	void process (nano::asc_pull_ack::blocks_payload const & response, account_scan::tag const &);
+	void process (nano::asc_pull_ack::account_info_payload const & response, lazy_pulling::tag const &);
 
 private:
-	nano::bootstrap_ascending::account_sets accounts;
-	nano::bootstrap_ascending::buffered_iterator iterator;
-	nano::bootstrap_ascending::throttle throttle;
-	// Calculates a lookback size based on the size of the ledger where larger ledgers have a larger sample count
-	std::size_t compute_throttle_size () const;
-
 	// clang-format off
 	class tag_sequenced {};
 	class tag_id {};
@@ -148,22 +131,16 @@ private:
 	mi::indexed_by<
 		mi::sequenced<mi::tag<tag_sequenced>>,
 		mi::hashed_unique<mi::tag<tag_id>,
-			mi::member<async_tag, nano::bootstrap_ascending::id_t, &async_tag::id>>,
-		mi::hashed_non_unique<mi::tag<tag_account>,
-			mi::member<async_tag, nano::account , &async_tag::account>>
+			mi::member<async_tag, nano::bootstrap_ascending::id_t, &async_tag::id>>
 	>>;
 	// clang-format on
 	ordered_tags tags;
 
 	nano::bootstrap_ascending::peer_scoring scoring;
-	// Requests for accounts from database have much lower hitrate and could introduce strain on the network
-	// A separate (lower) limiter ensures that we always reserve resources for querying accounts from priority queue
-	nano::bandwidth_limiter database_limiter;
 
 	bool stopped{ false };
 	mutable nano::mutex mutex;
 	mutable nano::condition_variable condition;
 	std::thread thread;
-	std::thread timeout_thread;
 };
 }

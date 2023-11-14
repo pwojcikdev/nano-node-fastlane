@@ -34,8 +34,6 @@ add_library(
   bootstrap/bootstrap_bulk_pull.cpp
   bootstrap/bootstrap_bulk_push.hpp
   bootstrap/bootstrap_bulk_push.cpp
-  bootstrap/bootstrap_config.hpp
-  bootstrap/bootstrap_config.cpp
   bootstrap/bootstrap_connections.hpp
   bootstrap/bootstrap_connections.cpp
   bootstrap/bootstrap_frontier.hpp
@@ -49,6 +47,8 @@ add_library(
   bootstrap_ascending/common.hpp
   bootstrap_ascending/throttle.hpp
   bootstrap_ascending/throttle.cpp
+  bootstrap_ascending/account_scan.hpp
+  bootstrap_ascending/account_scan.cpp
   bootstrap_ascending/account_sets.hpp
   bootstrap_ascending/account_sets.cpp
   bootstrap_ascending/iterators.hpp

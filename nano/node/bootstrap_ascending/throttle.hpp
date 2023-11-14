@@ -11,6 +11,7 @@ class throttle
 public:
 	// Initialized with all true samples
 	explicit throttle (std::size_t size);
+
 	[[nodiscard]] bool throttled () const;
 	void add (bool success);
 	// Resizes the number of samples tracked
