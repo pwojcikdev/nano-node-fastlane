@@ -480,8 +480,8 @@ public: // Payload
 	asc_pull_type type{ asc_pull_type::invalid };
 	id_t id{ 0 };
 
-	/** Payload depends on `asc_pull_type` */
-	std::variant<empty_payload, blocks_payload, account_info_payload, frontiers_payload> payload;
+	using payload_variant = std::variant<empty_payload, blocks_payload, account_info_payload, frontiers_payload>;
+	payload_variant payload;
 
 public:
 	/** Size of message without payload */
@@ -569,8 +569,8 @@ public: // Payload
 	asc_pull_type type{ asc_pull_type::invalid };
 	id_t id{ 0 };
 
-	/** Payload depends on `asc_pull_type` */
-	std::variant<empty_payload, blocks_payload, account_info_payload, frontiers_payload> payload;
+	using payload_variant = std::variant<empty_payload, blocks_payload, account_info_payload, frontiers_payload>;
+	payload_variant payload;
 
 public:
 	/** Size of message without payload */
