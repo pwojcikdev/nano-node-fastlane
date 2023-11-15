@@ -39,21 +39,25 @@ struct object_stream_config
 class object_stream;
 class array_stream;
 
+template <typename T>
+struct object_streamer
+{
+	object_streamer (T const &) = delete;
+};
+
 /*
  * Concepts used for choosing the correct writing function
  */
 
 template <typename T>
-concept object_streamable = requires (T const & obj, object_stream & obs)
-{
+concept object_streamable = requires (T const & obj, object_stream & obs) {
 	{
 		obj (obs)
 	};
 };
 
 template <typename T>
-concept array_streamable = requires (T const & obj, array_stream & ars)
-{
+concept array_streamable = requires (T const & obj, array_stream & ars) {
 	{
 		obj (ars)
 	};
@@ -148,6 +152,12 @@ public:
 public:
 	template <class Value>
 	void write (std::string_view name, Value const & value);
+
+	template <class Object>
+	void write_object (std::string_view name, Object const & object)
+	{
+		write (name, object_streamer<Object>{ object });
+	}
 
 private:
 	bool first_field{ true };
@@ -443,6 +453,35 @@ void root_object_stream::write (Value const & value)
 {
 	write_impl (value);
 }
+}
+
+/*
+ * Adapters for objects with object_stream operator
+ */
+
+namespace nano
+{
+template <object_streamable Value>
+struct object_streamer<Value>
+{
+	Value const & value;
+
+	void write (object_stream & obs)
+	{
+		value (obs);
+	}
+};
+
+template <array_streamable Value>
+struct object_streamer<Value>
+{
+	Value const & value;
+
+	void write (array_stream & ars)
+	{
+		value (ars);
+	}
+};
 }
 
 /*
