@@ -769,3 +769,17 @@ void nano::election::operator() (nano::object_stream & obs) const
 		};
 	}));
 }
+
+namespace nano
+{
+template <>
+struct object_streamer<nano::election>
+{
+	nano::election const & election;
+
+	void operator() (nano::object_stream & obs) const
+	{
+		election.operator() (obs);
+	}
+};
+}
