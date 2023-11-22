@@ -90,7 +90,7 @@ std::size_t nano::bootstrap_ascending::account_scan::blocked_size () const
 
 void nano::bootstrap_ascending::account_scan::process (const nano::asc_pull_ack::blocks_payload & response, const account_scan::tag & tag)
 {
-	stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::reply);
+	stats.inc (nano::stat::type::ascendboot_account_scan, nano::stat::detail::reply);
 
 	auto result = tag.verify (response);
 	switch (result)
@@ -99,7 +99,7 @@ void nano::bootstrap_ascending::account_scan::process (const nano::asc_pull_ack:
 
 		case ok:
 		{
-			stats.add (nano::stat::type::bootstrap_ascending, nano::stat::detail::blocks, nano::stat::dir::in, response.blocks.size ());
+			stats.add (nano::stat::type::ascendboot_account_scan, nano::stat::detail::blocks, nano::stat::dir::in, response.blocks.size ());
 
 			for (auto & block : response.blocks)
 			{
@@ -112,7 +112,7 @@ void nano::bootstrap_ascending::account_scan::process (const nano::asc_pull_ack:
 		break;
 		case nothing_new:
 		{
-			stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::nothing_new);
+			stats.inc (nano::stat::type::ascendboot_account_scan, nano::stat::detail::nothing_new);
 
 			nano::lock_guard<nano::mutex> lock{ mutex };
 			accounts.priority_down (tag.account);
@@ -121,7 +121,7 @@ void nano::bootstrap_ascending::account_scan::process (const nano::asc_pull_ack:
 		break;
 		case invalid:
 		{
-			stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::invalid);
+			stats.inc (nano::stat::type::ascendboot_account_scan, nano::stat::detail::invalid);
 			// TODO: Log
 		}
 		break;
@@ -139,8 +139,9 @@ void nano::bootstrap_ascending::account_scan::run ()
 	nano::unique_lock<nano::mutex> lock{ mutex };
 	while (!stopped)
 	{
+		stats.inc (nano::stat::type::ascendboot_account_scan, nano::stat::detail::loop);
+
 		lock.unlock ();
-		stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::loop); // TODO: Change stat type
 		run_one ();
 		lock.lock ();
 		throttle_if_needed (lock);
@@ -264,7 +265,7 @@ nano::account nano::bootstrap_ascending::account_scan::available_account ()
 		auto account = accounts.next ();
 		if (!account.is_zero ())
 		{
-			stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::next_priority);
+			stats.inc (nano::stat::type::ascendboot_account_scan, nano::stat::detail::next_priority);
 			return account;
 		}
 	}
@@ -274,12 +275,12 @@ nano::account nano::bootstrap_ascending::account_scan::available_account ()
 		auto account = iterator.next ();
 		if (!account.is_zero ())
 		{
-			stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::next_database);
+			stats.inc (nano::stat::type::ascendboot_account_scan, nano::stat::detail::next_database);
 			return account;
 		}
 	}
 
-	stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::next_none);
+	stats.inc (nano::stat::type::ascendboot_account_scan, nano::stat::detail::next_none);
 	return { 0 };
 }
 
@@ -316,7 +317,7 @@ void nano::bootstrap_ascending::account_scan::throttle_if_needed (nano::unique_l
 	debug_assert (lock.owns_lock ());
 	if (!iterator.warmup () && throttle.throttled ())
 	{
-		stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::throttled);
+		stats.inc (nano::stat::type::ascendboot_account_scan, nano::stat::detail::throttled);
 		condition.wait_for (lock, config.throttle_wait, [this] () { return stopped; });
 	}
 }

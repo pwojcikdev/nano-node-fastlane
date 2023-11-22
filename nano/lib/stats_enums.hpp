@@ -46,8 +46,10 @@ enum class type : uint8_t
 	optimistic_scheduler,
 	handshake,
 
-	bootstrap_ascending,
-	bootstrap_ascending_accounts,
+	ascendboot,
+	ascendboot_request,
+	ascendboot_account_sets,
+	ascendboot_account_scan,
 
 	_last // Must be the last enum
 };
@@ -280,6 +282,12 @@ enum class detail : uint8_t
 	invalid_node_id,
 	missing_cookie,
 	invalid_genesis,
+
+	// asc pull messages
+	blocks_by_account_payload,
+	blocks_by_hash_payload,
+	account_info_payload,
+	frontiers_payload,
 
 	// bootstrap ascending
 	missing_tag,
