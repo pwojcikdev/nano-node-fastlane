@@ -160,7 +160,6 @@ void transform_if (InputIt first, InputIt last, OutputIt dest, Pred pred, Func t
 
 /**
  * Erase elements from container when predicate returns true
- * TODO: Use `std::erase_if` in c++20
  */
 template <class Container, class Pred>
 void erase_if (Container & container, Pred pred)
@@ -175,6 +174,16 @@ void erase_if (Container & container, Pred pred)
 		{
 			++it;
 		}
+	}
+}
+
+template <class Container, class Func>
+void modify_all (Container & container, Func func)
+{
+	for (auto it = container.begin (), end = container.end (); it != end; ++it)
+	{
+		bool success = container.modify (it, func);
+		release_assert (success, "modification of container failed");
 	}
 }
 

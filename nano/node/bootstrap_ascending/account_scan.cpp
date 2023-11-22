@@ -26,7 +26,7 @@ nano::bootstrap_ascending::account_scan::account_scan (const nano::bootstrap_asc
 	accounts{ stats },
 	iterator{ ledger.store },
 	throttle{ compute_throttle_size () },
-	database_limiter{ config.database_requests_limit, 1.0 }
+	database_limiter{ config.database_rate_limit, 1.0 }
 {
 	block_processor.batch_processed.add ([this] (auto const & batch) {
 		bool should_notify = false;
@@ -317,7 +317,7 @@ void nano::bootstrap_ascending::account_scan::throttle_if_needed (nano::unique_l
 	if (!iterator.warmup () && throttle.throttled ())
 	{
 		stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::throttled);
-		condition.wait_for (lock, std::chrono::milliseconds{ config.throttle_wait }, [this] () { return stopped; });
+		condition.wait_for (lock, config.throttle_wait, [this] () { return stopped; });
 	}
 }
 
@@ -389,4 +389,14 @@ auto nano::bootstrap_ascending::account_scan::tag::verify (const nano::asc_pull_
 	}
 
 	return verify_result::ok;
+}
+
+std::unique_ptr<nano::container_info_component> nano::bootstrap_ascending::account_scan::collect_container_info (const std::string & name)
+{
+	nano::lock_guard<nano::mutex> lock{ mutex };
+
+	auto composite = std::make_unique<container_info_composite> (name);
+	composite->add_component (std::make_unique<container_info_leaf> (container_info{ "throttle", throttle.size (), 0 }));
+	composite->add_component (accounts.collect_container_info ("accounts"));
+	return composite;
 }

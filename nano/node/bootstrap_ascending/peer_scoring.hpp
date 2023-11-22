@@ -29,10 +29,9 @@ class peer_scoring
 {
 public:
 	peer_scoring (nano::bootstrap_ascending_config & config, nano::network_constants const & network_constants);
-	// Returns true if channel limit has been exceeded
-	bool try_send_message (std::shared_ptr<nano::transport::channel> channel);
-	void received_message (std::shared_ptr<nano::transport::channel> channel);
-	std::shared_ptr<nano::transport::channel> channel ();
+
+	void received_message (std::shared_ptr<nano::transport::channel> const & channel);
+	std::shared_ptr<nano::transport::channel> channel (uint8_t min_protocol_version = 0);
 	[[nodiscard]] std::size_t size () const;
 	// Cleans up scores for closed channels
 	// Decays scores which become inaccurate over time due to message drops
@@ -40,10 +39,19 @@ public:
 	void sync (std::deque<std::shared_ptr<nano::transport::channel>> const & list);
 
 private:
+	// Returns false if channel limit has been exceeded
+	bool try_send_message (std::shared_ptr<nano::transport::channel> const & channel);
+
+private: // Dependencies
+	nano::bootstrap_ascending_config const & config;
+	nano::network_constants const & network_constants;
+
+private:
 	class peer_score
 	{
 	public:
-		explicit peer_score (std::shared_ptr<nano::transport::channel> const &, uint64_t, uint64_t, uint64_t);
+		explicit peer_score (std::shared_ptr<nano::transport::channel> const &);
+
 		std::weak_ptr<nano::transport::channel> channel;
 		// std::weak_ptr does not provide ordering so the naked pointer is also tracked and used for ordering channels
 		// This pointer may be invalid if the channel has been destroyed
@@ -63,12 +71,10 @@ private:
 			outstanding = outstanding > 0 ? outstanding - 1 : 0;
 		}
 		// Number of outstanding requests to a peer
-		uint64_t outstanding{ 0 };
-		uint64_t request_count_total{ 0 };
+		uint64_t outstanding{ 1 };
+		uint64_t request_count_total{ 1 };
 		uint64_t response_count_total{ 0 };
 	};
-	nano::network_constants const & network_constants;
-	nano::bootstrap_ascending_config & config;
 
 	// clang-format off
 	// Indexes scores by their shared channel pointer

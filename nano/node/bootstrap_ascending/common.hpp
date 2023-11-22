@@ -10,32 +10,25 @@ using id_t = uint64_t;
 
 static nano::bootstrap_ascending::id_t generate_id ()
 {
-	nano::bootstrap_ascending::id_t id;
-	nano::random_pool::generate_block (reinterpret_cast<uint8_t *> (&id), sizeof (id));
-	return id;
+	return nano::random_pool::generate<nano::bootstrap_ascending::id_t> ();
 }
 
 template <typename Self, class Response>
 class tag_base
 {
 public:
-	nano::asc_pull_req::payload_variant prepare (auto & service)
-	{
-		return service.prepare (*static_cast<Self *> (this));
-	}
-
-	void process_response (nano::asc_pull_ack::payload_variant const & response, auto & service)
+	void process_response (nano::asc_pull_ack::payload_variant const & response, auto & service) const
 	{
 		std::visit ([&] (auto const & payload) { process (payload, service); }, response);
 	}
 
-	void process (Response const & response, auto & service)
+	void process (Response const & response, auto & service) const
 	{
-		service.process (response, *static_cast<Self *> (this));
+		service.process (response, *static_cast<Self const *> (this));
 	}
 
 	// Fallback
-	void process (auto const & response, auto & service)
+	void process (auto const & response, auto & service) const
 	{
 		nano::asc_pull_ack::payload_variant{ response }; // Force compilation error if response is not part of variant
 		debug_assert (false, "invalid payload");
