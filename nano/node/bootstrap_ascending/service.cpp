@@ -63,21 +63,6 @@ std::size_t nano::bootstrap_ascending::service::score_size () const
 	return scoring.size ();
 }
 
-void nano::bootstrap_ascending::service::request (const nano::bootstrap_ascending::service::tag_strategy_variant & strategy)
-{
-	auto channel = wait_available_channel ();
-	if (!channel)
-	{
-		return;
-	}
-
-	request (strategy, channel);
-}
-
-void nano::bootstrap_ascending::service::wait_next ()
-{
-}
-
 std::shared_ptr<nano::transport::channel> nano::bootstrap_ascending::service::wait_available_channel ()
 {
 	std::shared_ptr<nano::transport::channel> channel;
@@ -89,8 +74,14 @@ std::shared_ptr<nano::transport::channel> nano::bootstrap_ascending::service::wa
 	return channel;
 }
 
-bool nano::bootstrap_ascending::service::request (const tag_strategy_variant & strategy, std::shared_ptr<nano::transport::channel> & channel)
+bool nano::bootstrap_ascending::service::request (const nano::bootstrap_ascending::service::tag_strategy_variant & strategy, const nano::asc_pull_req::payload_variant & payload)
 {
+	auto channel = wait_available_channel ();
+	if (!channel)
+	{
+		return false; // Not sent
+	}
+
 	async_tag tag{ strategy };
 	tag.id = nano::bootstrap_ascending::generate_id ();
 	tag.time = std::chrono::steady_clock::now ();
@@ -99,9 +90,7 @@ bool nano::bootstrap_ascending::service::request (const tag_strategy_variant & s
 
 	nano::asc_pull_req request{ network_consts };
 	request.id = tag.id;
-	request.type = nano::asc_pull_type::blocks;
-
-	request.payload = tag.prepare_request (*this);
+	request.set_payload (payload);
 	request.update_header ();
 
 	track (tag);
@@ -146,18 +135,6 @@ void nano::bootstrap_ascending::service::run_timeouts ()
 
 		condition.wait_for (lock, 1s, [this] () { return stopped; });
 	}
-}
-
-nano::asc_pull_req::payload_variant nano::bootstrap_ascending::service::prepare (nano::bootstrap_ascending::account_scan::tag & tag)
-{
-	return account_scan.prepare (tag);
-}
-
-nano::asc_pull_req::payload_variant nano::bootstrap_ascending::service::prepare (nano::bootstrap_ascending::lazy_pulling::tag & tag)
-{
-	// TODO: Implement lazy pulling
-	nano::asc_pull_req::account_info_payload request;
-	return request;
 }
 
 void nano::bootstrap_ascending::service::process (nano::asc_pull_ack const & message, std::shared_ptr<nano::transport::channel> channel)

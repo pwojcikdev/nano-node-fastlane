@@ -88,31 +88,6 @@ std::size_t nano::bootstrap_ascending::account_scan::blocked_size () const
 	return accounts.blocked_size ();
 }
 
-nano::asc_pull_req::payload_variant nano::bootstrap_ascending::account_scan::prepare (account_scan::tag & tag)
-{
-	nano::asc_pull_req::blocks_payload request;
-	request.count = config.pull_count;
-
-	const auto account = tag.account; // Requested account
-
-	// Check if the account picked has blocks, if it does, start the pull from the highest block
-	auto info = ledger.store.account.get (ledger.store.tx_begin_read (), account);
-	if (info)
-	{
-		tag.type = account_scan::tag::query_type::blocks_by_hash;
-		tag.start = request.start = info->head;
-		request.start_type = nano::asc_pull_req::hash_type::block;
-	}
-	else
-	{
-		tag.type = account_scan::tag::query_type::blocks_by_account;
-		tag.start = request.start = account;
-		request.start_type = nano::asc_pull_req::hash_type::account;
-	}
-
-	return request;
-}
-
 void nano::bootstrap_ascending::account_scan::process (const nano::asc_pull_ack::blocks_payload & response, const account_scan::tag & tag)
 {
 	stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::reply);
@@ -172,6 +147,30 @@ void nano::bootstrap_ascending::account_scan::run ()
 	}
 }
 
+auto nano::bootstrap_ascending::account_scan::prepare_request (const nano::account account) -> std::pair<tag, nano::asc_pull_req::blocks_payload>
+{
+	tag tag{};
+	nano::asc_pull_req::blocks_payload request{};
+	request.count = config.pull_count;
+
+	// Check if the account picked has blocks, if it does, start the pull from the highest block
+	auto info = ledger.store.account.get (ledger.store.tx_begin_read (), account);
+	if (info)
+	{
+		tag.type = account_scan::tag::query_type::blocks_by_hash;
+		tag.start = request.start = info->head;
+		request.start_type = nano::asc_pull_req::hash_type::block;
+	}
+	else
+	{
+		tag.type = account_scan::tag::query_type::blocks_by_account;
+		tag.start = request.start = account;
+		request.start_type = nano::asc_pull_req::hash_type::account;
+	}
+
+	return { tag, request };
+}
+
 void nano::bootstrap_ascending::account_scan::run_one ()
 {
 	// Ensure there is enough space in blockprocessor for queuing new blocks
@@ -184,8 +183,8 @@ void nano::bootstrap_ascending::account_scan::run_one ()
 		return;
 	}
 
-	account_scan::tag tag{ {}, account };
-	service.request (tag);
+	auto [tag, request] = prepare_request (account);
+	service.request (tag, request);
 }
 
 /** Inspects a block that has been processed by the block processor

@@ -430,6 +430,7 @@ public:
 
 	void serialize_payload (nano::stream &) const;
 	void deserialize_payload (nano::stream &);
+
 	std::string to_string () const;
 
 private: // Debug
@@ -482,6 +483,8 @@ public: // Payload
 
 	using payload_variant = std::variant<empty_payload, blocks_payload, account_info_payload, frontiers_payload>;
 	payload_variant payload;
+
+	void set_payload (payload_variant const &);
 
 public:
 	/** Size of message without payload */

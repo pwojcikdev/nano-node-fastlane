@@ -1655,6 +1655,33 @@ std::string nano::asc_pull_req::to_string () const
 
 	return s;
 }
+
+void nano::asc_pull_req::set_payload (const nano::asc_pull_req::payload_variant & pld)
+{
+	struct type_visitor
+	{
+		nano::asc_pull_type operator() (empty_payload const &)
+		{
+			return asc_pull_type::invalid;
+		}
+		nano::asc_pull_type operator() (blocks_payload const &)
+		{
+			return asc_pull_type::blocks;
+		}
+		nano::asc_pull_type operator() (account_info_payload const &)
+		{
+			return asc_pull_type::account_info;
+		}
+		nano::asc_pull_type operator() (frontiers_payload const &)
+		{
+			return asc_pull_type::frontiers;
+		}
+	};
+
+	payload = pld;
+	type = std::visit (type_visitor{}, payload);
+}
+
 /*
  * asc_pull_req::blocks_payload
  */
