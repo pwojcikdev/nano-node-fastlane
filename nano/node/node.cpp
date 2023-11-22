@@ -156,7 +156,6 @@ nano::node::node (boost::asio::io_context & io_ctx_a, std::filesystem::path cons
 	wallets_store (*wallets_store_impl),
 	gap_cache (*this),
 	ledger (store, stats, network_params.ledger, flags_a.generate_cache),
-	checker (config.signature_checker_threads),
 	outbound_limiter{ outbound_bandwidth_limiter_config (config) },
 	// empty `config.peering_port` means the user made no port choice at all;
 	// otherwise, any value is considered, with `0` having the special meaning of 'let the OS pick a port instead'
@@ -176,14 +175,14 @@ nano::node::node (boost::asio::io_context & io_ctx_a, std::filesystem::path cons
 	application_path (application_path_a),
 	port_mapping (*this),
 	rep_crawler (*this),
-	vote_processor (checker, active, observers, stats, config, flags, logger, online_reps, rep_crawler, ledger, network_params),
+	vote_processor (active, observers, stats, config, flags, logger, online_reps, rep_crawler, ledger, network_params),
 	warmed_up (0),
 	block_processor (*this, write_database_queue),
 	online_reps (ledger, config),
 	history{ config.network_params.voting },
-	vote_uniquer (block_uniquer),
+	vote_uniquer{},
 	confirmation_height_processor (ledger, write_database_queue, config.conf_height_processor_batch_min_time, config.logging, logger, node_initialized_latch, flags.confirmation_height_processor_mode),
-	vote_cache{ config.vote_cache },
+	vote_cache{ config.vote_cache, stats },
 	generator{ config, ledger, wallets, vote_processor, history, network, stats, /* non-final */ false },
 	final_generator{ config, ledger, wallets, vote_processor, history, network, stats, /* final */ true },
 	active (*this, confirmation_height_processor),
@@ -566,8 +565,8 @@ std::unique_ptr<nano::container_info_component> nano::collect_container_info (no
 	composite->add_component (collect_container_info (node.block_arrival, "block_arrival"));
 	composite->add_component (collect_container_info (node.online_reps, "online_reps"));
 	composite->add_component (collect_container_info (node.history, "history"));
-	composite->add_component (collect_container_info (node.block_uniquer, "block_uniquer"));
-	composite->add_component (collect_container_info (node.vote_uniquer, "vote_uniquer"));
+	composite->add_component (node.block_uniquer.collect_container_info ("block_uniquer"));
+	composite->add_component (node.vote_uniquer.collect_container_info ("vote_uniquer"));
 	composite->add_component (collect_container_info (node.confirmation_height_processor, "confirmation_height_processor"));
 	composite->add_component (collect_container_info (node.distributed_work, "distributed_work"));
 	composite->add_component (collect_container_info (node.aggregator, "request_aggregator"));
@@ -728,7 +727,6 @@ void nano::node::stop ()
 	bootstrap_initiator.stop ();
 	tcp_listener.stop ();
 	port_mapping.stop ();
-	checker.stop ();
 	wallets.stop ();
 	stats.stop ();
 	epoch_upgrader.stop ();
