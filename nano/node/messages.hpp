@@ -580,6 +580,8 @@ public:
 	constexpr static std::size_t partial_size = sizeof (type) + sizeof (id);
 };
 
+nano::stat::detail to_stat_detail (nano::asc_pull_req::payload_variant const &);
+
 class message_visitor
 {
 public:

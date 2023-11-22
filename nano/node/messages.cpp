@@ -1993,3 +1993,37 @@ void nano::asc_pull_ack::frontiers_payload::deserialize (nano::stream & stream)
 		current = deserialize_frontier (stream);
 	}
 }
+
+nano::stat::detail nano::to_stat_detail (const nano::asc_pull_req::payload_variant & payload)
+{
+	struct stat_visitor
+	{
+		nano::stat::detail operator() (nano::empty_payload const & pld) const
+		{
+			debug_assert (false, "missing payload");
+			return nano::stat::detail::unknown;
+		}
+		nano::stat::detail operator() (nano::asc_pull_req::blocks_payload const & pld) const
+		{
+			switch (pld.start_type)
+			{
+				using enum nano::asc_pull_req::hash_type;
+				case account:
+					return nano::stat::detail::blocks_by_account_payload;
+				case block:
+					return nano::stat::detail::blocks_by_hash_payload;
+			}
+			debug_assert (false, "unknown type");
+			return nano::stat::detail::unknown;
+		}
+		nano::stat::detail operator() (nano::asc_pull_req::account_info_payload const & pld) const
+		{
+			return nano::stat::detail::account_info_payload;
+		}
+		nano::stat::detail operator() (nano::asc_pull_req::frontiers_payload const & pld) const
+		{
+			return nano::stat::detail::frontiers_payload;
+		}
+	};
+	return std::visit (stat_visitor{}, payload);
+}

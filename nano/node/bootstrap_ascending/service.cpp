@@ -95,7 +95,8 @@ bool nano::bootstrap_ascending::service::request (const nano::bootstrap_ascendin
 
 	track (tag);
 
-	stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::request, nano::stat::dir::out);
+	stats.inc (nano::stat::type::ascendboot, nano::stat::detail::request, nano::stat::dir::out);
+	stats.inc (nano::stat::type::ascendboot_request, to_stat_detail (payload), nano::stat::dir::out);
 
 	// TODO: There is no feedback mechanism if bandwidth limiter starts dropping our requests
 	channel->send (
@@ -110,6 +111,8 @@ void nano::bootstrap_ascending::service::run ()
 	nano::unique_lock<nano::mutex> lock{ mutex };
 	while (!stopped)
 	{
+		stats.inc (nano::stat::type::ascendboot, nano::stat::detail::loop);
+
 		scoring.sync (network.list ());
 		scoring.timeout ();
 
@@ -124,7 +127,7 @@ void nano::bootstrap_ascending::service::run ()
 			auto tag = tags_by_order.front ();
 			tags_by_order.pop_front ();
 			on_timeout.notify (tag);
-			stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::timeout);
+			stats.inc (nano::stat::type::ascendboot, nano::stat::detail::timeout);
 		}
 
 		lock.unlock ();
@@ -145,6 +148,8 @@ void nano::bootstrap_ascending::service::process (nano::asc_pull_ack const & mes
 	auto & tags_by_id = tags.get<tag_id> ();
 	if (auto existing = tags_by_id.find (message.id); existing != tags_by_id.end ())
 	{
+		stats.inc (nano::stat::type::ascendboot, nano::stat::detail::reply);
+
 		auto const tag = *existing;
 		tags_by_id.erase (existing);
 
@@ -159,7 +164,7 @@ void nano::bootstrap_ascending::service::process (nano::asc_pull_ack const & mes
 	}
 	else
 	{
-		stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::missing_tag);
+		stats.inc (nano::stat::type::ascendboot, nano::stat::detail::missing_tag);
 	}
 }
 
@@ -175,8 +180,6 @@ void nano::bootstrap_ascending::service::process (const nano::asc_pull_ack::acco
 
 void nano::bootstrap_ascending::service::track (async_tag const & tag)
 {
-	stats.inc (nano::stat::type::bootstrap_ascending, nano::stat::detail::track);
-
 	nano::lock_guard<nano::mutex> lock{ mutex };
 	debug_assert (tags.get<tag_id> ().count (tag.id) == 0);
 	tags.get<tag_id> ().insert (tag);
