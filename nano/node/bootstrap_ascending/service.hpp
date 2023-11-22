@@ -54,7 +54,7 @@ public:
 	/**
 	 * Process `asc_pull_ack` message coming from network
 	 */
-	void process (nano::asc_pull_ack const & message, std::shared_ptr<nano::transport::channel> channel);
+	void process (nano::asc_pull_ack const & message, std::shared_ptr<nano::transport::channel> const & channel);
 
 public: // Info
 	std::unique_ptr<nano::container_info_component> collect_container_info (std::string const & name);
@@ -69,8 +69,8 @@ private: // Dependencies
 	nano::stats & stats;
 
 public: // Strategies
-	account_scan account_scan;
-	lazy_pulling lazy_pulling;
+	nano::bootstrap_ascending::account_scan account_scan;
+	nano::bootstrap_ascending::lazy_pulling lazy_pulling;
 
 	using tag_strategy_variant = std::variant<account_scan::tag, lazy_pulling::tag>;
 
@@ -90,9 +90,7 @@ public: // Events
 	nano::observer_set<async_tag const &> on_timeout;
 
 private:
-	void run_timeouts ();
-
-	bool request (tag_strategy_variant const &, std::shared_ptr<nano::transport::channel> &);
+	void run ();
 	void track (async_tag const & tag);
 
 	/* Waits for channel with free capacity for bootstrap messages */
@@ -123,6 +121,5 @@ private:
 	mutable nano::mutex mutex;
 	mutable nano::condition_variable condition;
 	std::thread thread;
-	std::thread timeout_thread;
 };
 }

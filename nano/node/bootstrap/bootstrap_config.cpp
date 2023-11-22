@@ -4,6 +4,7 @@
 /*
  * account_sets_config
  */
+
 nano::error nano::account_sets_config::deserialize (nano::tomlconfig & toml)
 {
 	toml.get ("consideration_count", consideration_count);
@@ -30,10 +31,11 @@ nano::error nano::account_sets_config::serialize (nano::tomlconfig & toml) const
 /*
  * bootstrap_ascending_config
  */
+
 nano::error nano::bootstrap_ascending_config::deserialize (nano::tomlconfig & toml)
 {
 	toml.get ("requests_limit", requests_limit);
-	toml.get ("database_requests_limit", database_requests_limit);
+	toml.get ("database_rate_limit", database_rate_limit);
 	toml.get ("pull_count", pull_count);
 
 	auto timeout_l = timeout.count ();
@@ -57,8 +59,8 @@ nano::error nano::bootstrap_ascending_config::deserialize (nano::tomlconfig & to
 
 nano::error nano::bootstrap_ascending_config::serialize (nano::tomlconfig & toml) const
 {
-	toml.put ("requests_limit", requests_limit, "Request limit to ascending bootstrap after which requests will be dropped.\nNote: changing to unlimited (0) is not recommended.\ntype:uint64");
-	toml.put ("database_requests_limit", database_requests_limit, "Request limit for accounts from database after which requests will be dropped.\nNote: changing to unlimited (0) is not recommended as this operation competes for resources on querying the database.\ntype:uint64");
+	toml.put ("requests_limit", requests_limit, "Maximum number of outstanding requests to a peer.\nNote: changing to unlimited (0) is not recommended.\ntype:uint64");
+	toml.put ("database_rate_limit", database_rate_limit, "Rate limit on random sampling accounts from ledger.\nNote: changing to unlimited (0) is not recommended as this operation competes for resources on querying the database.\ntype:uint64");
 	toml.put ("pull_count", pull_count, "Number of requested blocks for ascending bootstrap request.\ntype:uint64");
 	toml.put ("timeout", timeout.count (), "Timeout in milliseconds for incoming ascending bootstrap messages to be processed.\ntype:milliseconds");
 	toml.put ("throttle_coefficient", throttle_coefficient, "Scales the number of samples to track for bootstrap throttling.\ntype:uint64");

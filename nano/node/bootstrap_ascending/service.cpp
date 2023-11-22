@@ -31,30 +31,30 @@ nano::bootstrap_ascending::service::~service ()
 {
 	// All threads must be stopped before destruction
 	debug_assert (!thread.joinable ());
-	debug_assert (!timeout_thread.joinable ());
 }
 
 void nano::bootstrap_ascending::service::start ()
 {
 	debug_assert (!thread.joinable ());
-	debug_assert (!timeout_thread.joinable ());
 
-	timeout_thread = std::thread ([this] () {
+	thread = std::thread ([this] () {
 		nano::thread_role::set (nano::thread_role::name::ascending_bootstrap);
-		run_timeouts ();
+		run ();
 	});
+
+	account_scan.start ();
 }
 
 void nano::bootstrap_ascending::service::stop ()
 {
 	account_scan.stop ();
+
 	{
 		nano::lock_guard<nano::mutex> lock{ mutex };
 		stopped = true;
 	}
 	condition.notify_all ();
 	nano::join_or_pass (thread);
-	nano::join_or_pass (timeout_thread);
 }
 
 std::size_t nano::bootstrap_ascending::service::score_size () const
@@ -105,7 +105,7 @@ bool nano::bootstrap_ascending::service::request (const nano::bootstrap_ascendin
 	return true; // Request sent
 }
 
-void nano::bootstrap_ascending::service::run_timeouts ()
+void nano::bootstrap_ascending::service::run ()
 {
 	nano::unique_lock<nano::mutex> lock{ mutex };
 	while (!stopped)
@@ -137,23 +137,22 @@ void nano::bootstrap_ascending::service::run_timeouts ()
 	}
 }
 
-void nano::bootstrap_ascending::service::process (nano::asc_pull_ack const & message, std::shared_ptr<nano::transport::channel> channel)
+void nano::bootstrap_ascending::service::process (nano::asc_pull_ack const & message, std::shared_ptr<nano::transport::channel> const & channel)
 {
 	nano::unique_lock<nano::mutex> lock{ mutex };
 
 	// Only process messages that have a known tag
 	auto & tags_by_id = tags.get<tag_id> ();
-	if (tags_by_id.count (message.id) > 0)
+	if (auto existing = tags_by_id.find (message.id); existing != tags_by_id.end ())
 	{
-		auto iterator = tags_by_id.find (message.id);
-		auto tag = *iterator;
-		tags_by_id.erase (iterator);
+		auto const tag = *existing;
+		tags_by_id.erase (existing);
+
 		scoring.received_message (channel);
 
 		lock.unlock ();
 
 		on_reply.notify (tag);
-		condition.notify_all ();
 
 		// Dispatch to specialized process overload
 		std::visit ([this, &message] (auto && strategy) { strategy.process_response (message.payload, *this); }, tag.strategy);
@@ -189,6 +188,6 @@ std::unique_ptr<nano::container_info_component> nano::bootstrap_ascending::servi
 
 	auto composite = std::make_unique<container_info_composite> (name);
 	composite->add_component (std::make_unique<container_info_leaf> (container_info{ "tags", tags.size (), sizeof (decltype (tags)::value_type) }));
-	//	composite->add_component (accounts.collect_container_info ("accounts"));
+	composite->add_component (account_scan.collect_container_info ("account_scan"));
 	return composite;
 }

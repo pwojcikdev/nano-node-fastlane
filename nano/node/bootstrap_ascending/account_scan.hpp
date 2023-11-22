@@ -44,7 +44,7 @@ public:
 	};
 
 public:
-	account_scan (bootstrap_ascending_config const &, service &, nano::ledger &, nano::network_constants &, nano::block_processor &, nano::stats &);
+	account_scan (bootstrap_ascending_config const &, nano::bootstrap_ascending::service &, nano::ledger &, nano::network_constants &, nano::block_processor &, nano::stats &);
 	~account_scan ();
 
 	void start ();
@@ -56,9 +56,11 @@ public:
 	std::size_t blocked_size () const;
 	std::size_t priority_size () const;
 
+	std::unique_ptr<nano::container_info_component> collect_container_info (std::string const & name);
+
 private: // Dependencies
 	bootstrap_ascending_config const & config;
-	service & service;
+	nano::bootstrap_ascending::service & service;
 	nano::ledger & ledger;
 	nano::network_constants & network_consts;
 	nano::block_processor & block_processor;
