@@ -56,8 +56,6 @@ public:
 	 */
 	void process (nano::asc_pull_ack const & message, std::shared_ptr<nano::transport::channel> channel);
 
-	void wait_next ();
-
 public: // Info
 	std::unique_ptr<nano::container_info_component> collect_container_info (std::string const & name);
 	std::size_t score_size () const;
@@ -76,7 +74,7 @@ public: // Strategies
 
 	using tag_strategy_variant = std::variant<account_scan::tag, lazy_pulling::tag>;
 
-	void request (tag_strategy_variant const &);
+	bool request (tag_strategy_variant const &, nano::asc_pull_req::payload_variant const &);
 
 public: // Tag
 	struct async_tag
@@ -84,11 +82,6 @@ public: // Tag
 		tag_strategy_variant strategy;
 		nano::bootstrap_ascending::id_t id{ 0 };
 		std::chrono::steady_clock::time_point time{};
-
-		nano::asc_pull_req::payload_variant prepare_request (service & service)
-		{
-			return std::visit ([&] (auto && sgy) { return sgy.prepare (service); }, strategy);
-		}
 	};
 
 public: // Events
@@ -106,9 +99,6 @@ private:
 	std::shared_ptr<nano::transport::channel> wait_available_channel ();
 
 public:
-	nano::asc_pull_req::payload_variant prepare (account_scan::tag &);
-	nano::asc_pull_req::payload_variant prepare (lazy_pulling::tag &);
-
 	void process (nano::asc_pull_ack::blocks_payload const & response, account_scan::tag const &);
 	void process (nano::asc_pull_ack::account_info_payload const & response, lazy_pulling::tag const &);
 

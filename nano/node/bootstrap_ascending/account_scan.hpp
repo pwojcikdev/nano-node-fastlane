@@ -50,7 +50,6 @@ public:
 	void start ();
 	void stop ();
 
-	nano::asc_pull_req::payload_variant prepare (account_scan::tag &);
 	void process (nano::asc_pull_ack::blocks_payload const & response, account_scan::tag const &);
 	void cleanup ();
 
@@ -68,6 +67,7 @@ private: // Dependencies
 private:
 	void run ();
 	void run_one ();
+	std::pair<tag, nano::asc_pull_req::blocks_payload> prepare_request (nano::account account);
 
 	/* Inspects a block that has been processed by the block processor */
 	void inspect (store::transaction const &, nano::process_return const & result, nano::block const & block);
