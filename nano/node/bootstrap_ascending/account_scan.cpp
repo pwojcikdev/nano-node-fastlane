@@ -261,6 +261,8 @@ void nano::bootstrap_ascending::account_scan::inspect (store::transaction const 
 
 nano::account nano::bootstrap_ascending::account_scan::available_account ()
 {
+	debug_assert (!mutex.try_lock ());
+
 	{
 		auto account = accounts.next ();
 		if (!account.is_zero ())
@@ -297,7 +299,7 @@ nano::account nano::bootstrap_ascending::account_scan::wait_available_account ()
 		}
 		else
 		{
-			condition.wait_for (lock, 100ms);
+			condition.wait_for (lock, config.throttle_wait); // We will be woken up if a new account is ready
 		}
 	}
 	return { 0 };
@@ -306,9 +308,20 @@ nano::account nano::bootstrap_ascending::account_scan::wait_available_account ()
 void nano::bootstrap_ascending::account_scan::wait_blockprocessor ()
 {
 	nano::unique_lock<nano::mutex> lock{ mutex };
-	while (!stopped && block_processor.half_full ())
+	while (!stopped)
 	{
-		condition.wait_for (lock, 500ms, [this] () { return stopped; }); // Blockprocessor is relatively slow, sleeping here instead of using conditions
+		lock.unlock ();
+
+		// Do not check blockprocessor when holding a lock as it may cause a deadlock
+		if (block_processor.size () > 1024)
+		{
+			lock.lock ();
+			condition.wait_for (lock, config.throttle_wait, [this] () { return stopped; });
+		}
+		else
+		{
+			return;
+		}
 	}
 }
 
