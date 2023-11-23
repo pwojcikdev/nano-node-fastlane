@@ -32,8 +32,6 @@ add_library(
   bootstrap/bootstrap_bulk_pull.cpp
   bootstrap/bootstrap_bulk_push.hpp
   bootstrap/bootstrap_bulk_push.cpp
-  bootstrap/bootstrap_config.hpp
-  bootstrap/bootstrap_config.cpp
   bootstrap/bootstrap_connections.hpp
   bootstrap/bootstrap_connections.cpp
   bootstrap/bootstrap_frontier.hpp

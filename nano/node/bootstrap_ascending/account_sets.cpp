@@ -1,6 +1,6 @@
 #include <nano/lib/stats.hpp>
+#include <nano/lib/tomlconfig.hpp>
 #include <nano/lib/utility.hpp>
-#include <nano/node/bootstrap/bootstrap_config.hpp>
 #include <nano/node/bootstrap_ascending/account_sets.hpp>
 
 #include <algorithm>
@@ -11,9 +11,9 @@
  * account_sets
  */
 
-nano::bootstrap_ascending::account_sets::account_sets (nano::stats & stats_a, nano::account_sets_config config_a) :
-	stats{ stats_a },
-	config{ std::move (config_a) }
+nano::bootstrap_ascending::account_sets::account_sets (account_sets_config const & config_a, nano::stats & stats_a) :
+	config{ config_a },
+	stats{ stats_a }
 {
 }
 
@@ -252,4 +252,31 @@ nano::bootstrap_ascending::account_sets::priority_entry::priority_entry (nano::a
 	priority{ priority_a }
 {
 	id = nano::bootstrap_ascending::generate_id ();
+}
+
+/*
+ * account_sets_config
+ */
+
+nano::error nano::bootstrap_ascending::account_sets_config::deserialize (nano::tomlconfig & toml)
+{
+	toml.get ("consideration_count", consideration_count);
+	toml.get ("priorities_max", priorities_max);
+	toml.get ("blocking_max", blocking_max);
+
+	auto cooldown_l = cooldown.count ();
+	toml.get ("cooldown", cooldown_l);
+	cooldown = std::chrono::milliseconds{ cooldown_l };
+
+	return toml.get_error ();
+}
+
+nano::error nano::bootstrap_ascending::account_sets_config::serialize (nano::tomlconfig & toml) const
+{
+	toml.put ("consideration_count", consideration_count, "Limit the number of account candidates to consider and also the number of iterations.\ntype:uint64");
+	toml.put ("priorities_max", priorities_max, "Cutoff size limit for the priority list.\ntype:uint64");
+	toml.put ("blocking_max", blocking_max, "Cutoff size limit for the blocked accounts from the priority list.\ntype:uint64");
+	toml.put ("cooldown", cooldown.count (), "Waiting time for an account to become available.\ntype:milliseconds");
+
+	return toml.get_error ();
 }

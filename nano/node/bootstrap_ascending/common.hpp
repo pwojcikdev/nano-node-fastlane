@@ -1,6 +1,7 @@
 #pragma once
 
 #include <nano/crypto_lib/random_pool.hpp>
+#include <nano/node/messages.hpp>
 
 #include <cstdlib>
 

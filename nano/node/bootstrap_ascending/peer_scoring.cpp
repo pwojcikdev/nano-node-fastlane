@@ -1,12 +1,12 @@
-#include <nano/node/bootstrap/bootstrap_config.hpp>
 #include <nano/node/bootstrap_ascending/peer_scoring.hpp>
+#include <nano/node/bootstrap_ascending/service.hpp>
 #include <nano/node/transport/channel.hpp>
 
 /*
  * peer_scoring
  */
 
-nano::bootstrap_ascending::peer_scoring::peer_scoring (nano::bootstrap_ascending_config & config, nano::network_constants const & network_constants) :
+nano::bootstrap_ascending::peer_scoring::peer_scoring (nano::bootstrap_ascending::config & config, nano::network_constants const & network_constants) :
 	config{ config },
 	network_constants{ network_constants }
 {

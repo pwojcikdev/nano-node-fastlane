@@ -24,11 +24,13 @@ namespace transport
 
 namespace nano::bootstrap_ascending
 {
+class config;
+
 // Container for tracking and scoring peers with respect to bootstrapping
 class peer_scoring
 {
 public:
-	peer_scoring (nano::bootstrap_ascending_config & config, nano::network_constants const & network_constants);
+	peer_scoring (nano::bootstrap_ascending::config & config, nano::network_constants const & network_constants);
 
 	void received_message (std::shared_ptr<nano::transport::channel> const & channel);
 	std::shared_ptr<nano::transport::channel> channel (uint8_t min_protocol_version = 0);
@@ -43,7 +45,7 @@ private:
 	bool try_send_message (std::shared_ptr<nano::transport::channel> const & channel);
 
 private: // Dependencies
-	nano::bootstrap_ascending_config const & config;
+	nano::bootstrap_ascending::config const & config;
 	nano::network_constants const & network_constants;
 
 private:

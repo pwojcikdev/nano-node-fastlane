@@ -1,7 +1,6 @@
 #pragma once
 
 #include <nano/lib/numbers.hpp>
-#include <nano/node/bootstrap/bootstrap_config.hpp>
 #include <nano/node/bootstrap_ascending/common.hpp>
 
 #include <boost/multi_index/hashed_index.hpp>
@@ -23,11 +22,23 @@ class stats;
 
 namespace nano::bootstrap_ascending
 {
+class account_sets_config final
+{
+public:
+	nano::error deserialize (nano::tomlconfig & toml);
+	nano::error serialize (nano::tomlconfig & toml) const;
+
+	std::size_t consideration_count{ 4 };
+	std::size_t priorities_max{ 256 * 1024 };
+	std::size_t blocking_max{ 256 * 1024 };
+	std::chrono::milliseconds cooldown{ 1000 * 3 };
+};
+
 /** This class tracks accounts various account sets which are shared among the multiple bootstrap threads */
 class account_sets
 {
 public:
-	explicit account_sets (nano::stats &, nano::account_sets_config config = {});
+	account_sets (account_sets_config const &, nano::stats &);
 
 	/**
 	 * If an account is not blocked, increase its priority.
@@ -64,6 +75,7 @@ private:
 	bool check_timestamp (nano::account const & account) const;
 
 private: // Dependencies
+	account_sets_config const & config;
 	nano::stats & stats;
 
 private:
@@ -124,9 +136,6 @@ private:
 	ordered_blocking blocking;
 
 	std::default_random_engine rng;
-
-private:
-	nano::account_sets_config config;
 
 public: // Consts
 	static float constexpr priority_initial = 8.0f;

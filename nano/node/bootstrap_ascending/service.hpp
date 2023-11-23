@@ -5,7 +5,7 @@
 #include <nano/lib/observer_set.hpp>
 #include <nano/lib/timer.hpp>
 #include <nano/node/bandwidth_limiter.hpp>
-#include <nano/node/bootstrap/bootstrap_config.hpp>
+#include <nano/node/bootstrap/bootstrap_server.hpp>
 #include <nano/node/bootstrap_ascending/account_scan.hpp>
 #include <nano/node/bootstrap_ascending/common.hpp>
 #include <nano/node/bootstrap_ascending/peer_scoring.hpp>
@@ -40,6 +40,23 @@ public:
 	class tag : public nano::bootstrap_ascending::tag_base<tag, nano::asc_pull_ack::account_info_payload>
 	{
 	};
+};
+
+class config final
+{
+public:
+	nano::error deserialize (nano::tomlconfig & toml);
+	nano::error serialize (nano::tomlconfig & toml) const;
+
+	// Maximum number of un-responded requests per channel
+	std::size_t requests_limit{ 64 };
+	std::size_t database_rate_limit{ 1024 };
+	std::size_t pull_count{ nano::bootstrap_server::max_blocks };
+	std::chrono::milliseconds timeout{ 1000 * 3 };
+	std::size_t throttle_coefficient{ 16 };
+	std::chrono::milliseconds throttle_wait{ 100 };
+
+	account_sets_config account_sets;
 };
 
 class service final
