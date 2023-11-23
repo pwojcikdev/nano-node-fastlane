@@ -70,7 +70,7 @@ std::shared_ptr<nano::transport::channel> nano::bootstrap_ascending::service::wa
 	nano::unique_lock<nano::mutex> lock{ mutex };
 	while (!stopped && !(channel = scoring.channel ()))
 	{
-		condition.wait_for (lock, 100ms, [this] () { return stopped; });
+		condition.wait_for (lock, config.bootstrap_ascending.throttle_wait, [this] () { return stopped; });
 	}
 	return channel;
 }
