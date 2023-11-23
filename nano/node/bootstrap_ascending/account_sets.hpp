@@ -31,7 +31,7 @@ public:
 	std::size_t consideration_count{ 4 };
 	std::size_t priorities_max{ 256 * 1024 };
 	std::size_t blocking_max{ 256 * 1024 };
-	std::chrono::milliseconds cooldown{ 1000 * 3 };
+	std::chrono::milliseconds cooldown{ 1000 * 5 };
 };
 
 /** This class tracks accounts various account sets which are shared among the multiple bootstrap threads */
