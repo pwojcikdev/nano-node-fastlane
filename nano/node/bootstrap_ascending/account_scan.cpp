@@ -16,14 +16,14 @@ using namespace std::chrono_literals;
  * account_scan
  */
 
-nano::bootstrap_ascending::account_scan::account_scan (const nano::bootstrap_ascending_config & config_a, nano::bootstrap_ascending::service & service_a, nano::ledger & ledger_a, nano::network_constants & network_consts_a, nano::block_processor & block_processor_a, nano::stats & stats_a) :
+nano::bootstrap_ascending::account_scan::account_scan (const nano::bootstrap_ascending::config & config_a, nano::bootstrap_ascending::service & service_a, nano::ledger & ledger_a, nano::network_constants & network_consts_a, nano::block_processor & block_processor_a, nano::stats & stats_a) :
 	config{ config_a },
 	service{ service_a },
 	ledger{ ledger_a },
 	network_consts{ network_consts_a },
 	block_processor{ block_processor_a },
 	stats{ stats_a },
-	accounts{ stats },
+	accounts{ config.account_sets, stats },
 	iterator{ ledger.store },
 	throttle{ compute_throttle_size () },
 	database_limiter{ config.database_rate_limit, 1.0 }

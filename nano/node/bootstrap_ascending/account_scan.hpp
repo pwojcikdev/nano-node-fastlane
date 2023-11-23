@@ -5,6 +5,7 @@
 #include <nano/node/bootstrap_ascending/common.hpp>
 #include <nano/node/bootstrap_ascending/iterators.hpp>
 #include <nano/node/bootstrap_ascending/throttle.hpp>
+#include <nano/node/messages.hpp>
 
 namespace nano
 {
@@ -16,6 +17,7 @@ class network;
 namespace nano::bootstrap_ascending
 {
 class service;
+class config;
 
 class account_scan final
 {
@@ -44,7 +46,7 @@ public:
 	};
 
 public:
-	account_scan (bootstrap_ascending_config const &, nano::bootstrap_ascending::service &, nano::ledger &, nano::network_constants &, nano::block_processor &, nano::stats &);
+	account_scan (nano::bootstrap_ascending::config const &, nano::bootstrap_ascending::service &, nano::ledger &, nano::network_constants &, nano::block_processor &, nano::stats &);
 	~account_scan ();
 
 	void start ();
@@ -59,7 +61,7 @@ public:
 	std::unique_ptr<nano::container_info_component> collect_container_info (std::string const & name);
 
 private: // Dependencies
-	bootstrap_ascending_config const & config;
+	nano::bootstrap_ascending::config const & config;
 	nano::bootstrap_ascending::service & service;
 	nano::ledger & ledger;
 	nano::network_constants & network_consts;

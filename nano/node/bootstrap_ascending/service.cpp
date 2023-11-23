@@ -1,4 +1,5 @@
 #include <nano/lib/stats_enums.hpp>
+#include <nano/lib/tomlconfig.hpp>
 #include <nano/node/blockprocessor.hpp>
 #include <nano/node/bootstrap_ascending/service.hpp>
 #include <nano/node/network.hpp>
@@ -193,4 +194,49 @@ std::unique_ptr<nano::container_info_component> nano::bootstrap_ascending::servi
 	composite->add_component (std::make_unique<container_info_leaf> (container_info{ "tags", tags.size (), sizeof (decltype (tags)::value_type) }));
 	composite->add_component (account_scan.collect_container_info ("account_scan"));
 	return composite;
+}
+
+/*
+ * bootstrap_ascending_config
+ */
+
+nano::error nano::bootstrap_ascending::config::deserialize (nano::tomlconfig & toml)
+{
+	toml.get ("requests_limit", requests_limit);
+	toml.get ("database_rate_limit", database_rate_limit);
+	toml.get ("pull_count", pull_count);
+
+	auto timeout_l = timeout.count ();
+	toml.get ("timeout", timeout_l);
+	timeout = std::chrono::milliseconds{ timeout_l };
+
+	toml.get ("throttle_coefficient", throttle_coefficient);
+
+	auto throttle_wait_l = throttle_wait.count ();
+	toml.get ("throttle_wait", throttle_wait_l);
+	throttle_wait = std::chrono::milliseconds{ throttle_wait_l };
+
+	if (toml.has_key ("account_sets"))
+	{
+		auto config_l = toml.get_required_child ("account_sets");
+		account_sets.deserialize (config_l);
+	}
+
+	return toml.get_error ();
+}
+
+nano::error nano::bootstrap_ascending::config::serialize (nano::tomlconfig & toml) const
+{
+	toml.put ("requests_limit", requests_limit, "Maximum number of outstanding requests to a peer.\nNote: changing to unlimited (0) is not recommended.\ntype:uint64");
+	toml.put ("database_rate_limit", database_rate_limit, "Rate limit on random sampling accounts from ledger.\nNote: changing to unlimited (0) is not recommended as this operation competes for resources on querying the database.\ntype:uint64");
+	toml.put ("pull_count", pull_count, "Number of requested blocks for ascending bootstrap request.\ntype:uint64");
+	toml.put ("timeout", timeout.count (), "Timeout in milliseconds for incoming ascending bootstrap messages to be processed.\ntype:milliseconds");
+	toml.put ("throttle_coefficient", throttle_coefficient, "Scales the number of samples to track for bootstrap throttling.\ntype:uint64");
+	toml.put ("throttle_wait", throttle_wait.count (), "Length of time to wait between requests when throttled.\ntype:milliseconds");
+
+	nano::tomlconfig account_sets_l;
+	account_sets.serialize (account_sets_l);
+	toml.put_child ("account_sets", account_sets_l);
+
+	return toml.get_error ();
 }
