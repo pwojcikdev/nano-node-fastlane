@@ -50,9 +50,9 @@ public:
 
 	// Maximum number of un-responded requests per channel
 	std::size_t requests_limit{ 64 };
-	std::size_t database_rate_limit{ 1024 };
+	std::size_t database_rate_limit{ 10 };
 	std::size_t pull_count{ nano::bootstrap_server::max_blocks };
-	std::chrono::milliseconds timeout{ 1000 * 3 };
+	std::chrono::milliseconds timeout{ 1000 * 5 };
 	std::chrono::milliseconds throttle_wait{ 100 };
 
 	account_sets_config account_sets;
