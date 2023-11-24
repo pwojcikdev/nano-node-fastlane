@@ -24,6 +24,8 @@ add_library(
   block_broadcast.hpp
   blockprocessor.hpp
   blockprocessor.cpp
+  bootstrap_server.hpp
+  bootstrap_server.cpp
   bootstrap/block_deserializer.hpp
   bootstrap/block_deserializer.cpp
   bootstrap/bootstrap_attempt.hpp
@@ -44,8 +46,6 @@ add_library(
   bootstrap/bootstrap_legacy.cpp
   bootstrap/bootstrap.hpp
   bootstrap/bootstrap.cpp
-  bootstrap/bootstrap_server.hpp
-  bootstrap/bootstrap_server.cpp
   bootstrap_ascending/common.hpp
   bootstrap_ascending/throttle.hpp
   bootstrap_ascending/throttle.cpp

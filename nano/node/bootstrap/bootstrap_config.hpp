@@ -2,7 +2,7 @@
 
 #include <nano/lib/errors.hpp>
 #include <nano/lib/timer.hpp>
-#include <nano/node/bootstrap/bootstrap_server.hpp>
+#include <nano/node/bootstrap_server.hpp>
 
 namespace nano
 {

@@ -11,6 +11,7 @@
 #include <nano/node/bootstrap_ascending/iterators.hpp>
 #include <nano/node/bootstrap_ascending/peer_scoring.hpp>
 #include <nano/node/bootstrap_ascending/throttle.hpp>
+#include <nano/node/bootstrap_server.hpp>
 
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
