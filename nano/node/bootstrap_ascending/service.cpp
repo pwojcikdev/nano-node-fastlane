@@ -23,7 +23,7 @@ nano::bootstrap_ascending::service::service (nano::node_config & config_a, nano:
 	ledger{ ledger_a },
 	network{ network_a },
 	stats{ stats_a },
-	account_scan{ config.bootstrap_ascending, *this, ledger, network_consts, block_processor, stats },
+	priority{ config.bootstrap_ascending, *this, ledger, network_consts, block_processor, stats },
 	scoring{ config.bootstrap_ascending, config.network_params.network }
 {
 }
@@ -43,7 +43,7 @@ void nano::bootstrap_ascending::service::start ()
 		run ();
 	});
 
-	account_scan.start ();
+	priority.start ();
 }
 
 void nano::bootstrap_ascending::service::stop ()
@@ -55,7 +55,7 @@ void nano::bootstrap_ascending::service::stop ()
 	condition.notify_all ();
 	nano::join_or_pass (thread);
 
-	account_scan.stop ();
+	priority.stop ();
 }
 
 std::size_t nano::bootstrap_ascending::service::score_size () const
@@ -133,7 +133,7 @@ void nano::bootstrap_ascending::service::run ()
 
 		lock.unlock ();
 
-		account_scan.cleanup ();
+		priority.cleanup ();
 
 		lock.lock ();
 
@@ -169,12 +169,12 @@ void nano::bootstrap_ascending::service::process (nano::asc_pull_ack const & mes
 	}
 }
 
-void nano::bootstrap_ascending::service::process (const nano::asc_pull_ack::blocks_payload & response, const account_scan::tag & tag)
+void nano::bootstrap_ascending::service::process (const nano::asc_pull_ack::blocks_payload & response, const nano::bootstrap_ascending::priority_accounts::tag & tag)
 {
-	account_scan.process (response, tag);
+	priority.process (response, tag);
 }
 
-void nano::bootstrap_ascending::service::process (const nano::asc_pull_ack::account_info_payload & response, const lazy_pulling::tag & tag)
+void nano::bootstrap_ascending::service::process (const nano::asc_pull_ack::account_info_payload & response, const nano::bootstrap_ascending::lazy_pulling::tag & tag)
 {
 	// TODO: Make use of account info
 }
@@ -192,7 +192,7 @@ std::unique_ptr<nano::container_info_component> nano::bootstrap_ascending::servi
 
 	auto composite = std::make_unique<container_info_composite> (name);
 	composite->add_component (std::make_unique<container_info_leaf> (container_info{ "tags", tags.size (), sizeof (decltype (tags)::value_type) }));
-	composite->add_component (account_scan.collect_container_info ("account_scan"));
+	composite->add_component (priority.collect_container_info ("priority"));
 	return composite;
 }
 

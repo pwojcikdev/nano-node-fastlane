@@ -49,7 +49,7 @@ enum class type : uint8_t
 	ascendboot,
 	ascendboot_request,
 	ascendboot_account_sets,
-	ascendboot_account_scan,
+	ascendboot_priority_accounts,
 
 	_last // Must be the last enum
 };

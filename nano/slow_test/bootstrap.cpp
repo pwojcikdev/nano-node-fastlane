@@ -179,7 +179,7 @@ TEST (bootstrap_ascending, profile)
 	rate.observe ("block_processor", [&] () { return client->block_processor.size (); });
 	rate.observe (*client, nano::stat::type::ascendboot, nano::stat::detail::request, nano::stat::dir::out);
 	rate.observe (*client, nano::stat::type::ascendboot, nano::stat::detail::reply, nano::stat::dir::in);
-	rate.observe (*client, nano::stat::type::ascendboot_account_scan, nano::stat::detail::blocks, nano::stat::dir::in);
+	rate.observe (*client, nano::stat::type::ascendboot_priority_accounts, nano::stat::detail::blocks, nano::stat::dir::in);
 	rate.observe (*server, nano::stat::type::bootstrap_server, nano::stat::detail::blocks, nano::stat::dir::out);
 	rate.observe (*client, nano::stat::type::ledger, nano::stat::detail::old, nano::stat::dir::in);
 	rate.observe (*client, nano::stat::type::ledger, nano::stat::detail::gap_epoch_open_pending, nano::stat::dir::in);

@@ -1,6 +1,6 @@
 #include <nano/lib/stats_enums.hpp>
 #include <nano/node/blockprocessor.hpp>
-#include <nano/node/bootstrap_ascending/account_scan.hpp>
+#include <nano/node/bootstrap_ascending/priority_accounts.hpp>
 #include <nano/node/bootstrap_ascending/service.hpp>
 #include <nano/node/network.hpp>
 #include <nano/node/nodeconfig.hpp>
@@ -16,7 +16,7 @@ using namespace std::chrono_literals;
  * account_scan
  */
 
-nano::bootstrap_ascending::account_scan::account_scan (const nano::bootstrap_ascending::config & config_a, nano::bootstrap_ascending::service & service_a, nano::ledger & ledger_a, nano::network_constants & network_consts_a, nano::block_processor & block_processor_a, nano::stats & stats_a) :
+nano::bootstrap_ascending::priority_accounts::priority_accounts (const nano::bootstrap_ascending::config & config_a, nano::bootstrap_ascending::service & service_a, nano::ledger & ledger_a, nano::network_constants & network_consts_a, nano::block_processor & block_processor_a, nano::stats & stats_a) :
 	config{ config_a },
 	service{ service_a },
 	ledger{ ledger_a },
@@ -49,13 +49,13 @@ nano::bootstrap_ascending::account_scan::account_scan (const nano::bootstrap_asc
 	});
 }
 
-nano::bootstrap_ascending::account_scan::~account_scan ()
+nano::bootstrap_ascending::priority_accounts::~priority_accounts ()
 {
 	// All threads must be stopped before destruction
 	debug_assert (!thread.joinable ());
 }
 
-void nano::bootstrap_ascending::account_scan::start ()
+void nano::bootstrap_ascending::priority_accounts::start ()
 {
 	debug_assert (!thread.joinable ());
 
@@ -65,7 +65,7 @@ void nano::bootstrap_ascending::account_scan::start ()
 	});
 }
 
-void nano::bootstrap_ascending::account_scan::stop ()
+void nano::bootstrap_ascending::priority_accounts::stop ()
 {
 	{
 		nano::lock_guard<nano::mutex> lock{ mutex };
@@ -75,30 +75,30 @@ void nano::bootstrap_ascending::account_scan::stop ()
 	nano::join_or_pass (thread);
 }
 
-std::size_t nano::bootstrap_ascending::account_scan::priority_size () const
+std::size_t nano::bootstrap_ascending::priority_accounts::priority_size () const
 {
 	nano::lock_guard<nano::mutex> lock{ mutex };
 	return accounts.priority_size ();
 }
 
-std::size_t nano::bootstrap_ascending::account_scan::blocked_size () const
+std::size_t nano::bootstrap_ascending::priority_accounts::blocked_size () const
 {
 	nano::lock_guard<nano::mutex> lock{ mutex };
 	return accounts.blocked_size ();
 }
 
-void nano::bootstrap_ascending::account_scan::process (const nano::asc_pull_ack::blocks_payload & response, const account_scan::tag & tag)
+void nano::bootstrap_ascending::priority_accounts::process (const nano::asc_pull_ack::blocks_payload & response, const tag & tag)
 {
-	stats.inc (nano::stat::type::ascendboot_account_scan, nano::stat::detail::reply);
+	stats.inc (nano::stat::type::ascendboot_priority_accounts, nano::stat::detail::reply);
 
 	auto result = tag.verify (response);
 	switch (result)
 	{
-		using enum account_scan::tag::verify_result;
+		using enum tag::verify_result;
 
 		case ok:
 		{
-			stats.add (nano::stat::type::ascendboot_account_scan, nano::stat::detail::blocks, nano::stat::dir::in, response.blocks.size ());
+			stats.add (nano::stat::type::ascendboot_priority_accounts, nano::stat::detail::blocks, nano::stat::dir::in, response.blocks.size ());
 
 			for (auto & block : response.blocks)
 			{
@@ -108,7 +108,7 @@ void nano::bootstrap_ascending::account_scan::process (const nano::asc_pull_ack:
 		break;
 		case nothing_new:
 		{
-			stats.inc (nano::stat::type::ascendboot_account_scan, nano::stat::detail::nothing_new);
+			stats.inc (nano::stat::type::ascendboot_priority_accounts, nano::stat::detail::nothing_new);
 
 			nano::lock_guard<nano::mutex> lock{ mutex };
 			accounts.priority_down (tag.account);
@@ -116,23 +116,23 @@ void nano::bootstrap_ascending::account_scan::process (const nano::asc_pull_ack:
 		break;
 		case invalid:
 		{
-			stats.inc (nano::stat::type::ascendboot_account_scan, nano::stat::detail::invalid);
+			stats.inc (nano::stat::type::ascendboot_priority_accounts, nano::stat::detail::invalid);
 			// TODO: Log
 		}
 		break;
 	}
 }
 
-void nano::bootstrap_ascending::account_scan::cleanup ()
+void nano::bootstrap_ascending::priority_accounts::cleanup ()
 {
 }
 
-void nano::bootstrap_ascending::account_scan::run ()
+void nano::bootstrap_ascending::priority_accounts::run ()
 {
 	nano::unique_lock<nano::mutex> lock{ mutex };
 	while (!stopped)
 	{
-		stats.inc (nano::stat::type::ascendboot_account_scan, nano::stat::detail::loop);
+		stats.inc (nano::stat::type::ascendboot_priority_accounts, nano::stat::detail::loop);
 
 		lock.unlock ();
 		run_one ();
@@ -140,7 +140,7 @@ void nano::bootstrap_ascending::account_scan::run ()
 	}
 }
 
-auto nano::bootstrap_ascending::account_scan::prepare_request (const nano::account account) -> std::pair<tag, nano::asc_pull_req::blocks_payload>
+auto nano::bootstrap_ascending::priority_accounts::prepare_request (const nano::account account) -> std::pair<tag, nano::asc_pull_req::blocks_payload>
 {
 	tag tag{};
 	nano::asc_pull_req::blocks_payload request{};
@@ -150,13 +150,13 @@ auto nano::bootstrap_ascending::account_scan::prepare_request (const nano::accou
 	auto info = ledger.store.account.get (ledger.store.tx_begin_read (), account);
 	if (info)
 	{
-		tag.type = account_scan::tag::query_type::blocks_by_hash;
+		tag.type = tag::query_type::blocks_by_hash;
 		tag.start = request.start = info->head;
 		request.start_type = nano::asc_pull_req::hash_type::block;
 	}
 	else
 	{
-		tag.type = account_scan::tag::query_type::blocks_by_account;
+		tag.type = tag::query_type::blocks_by_account;
 		tag.start = request.start = account;
 		request.start_type = nano::asc_pull_req::hash_type::account;
 	}
@@ -164,7 +164,7 @@ auto nano::bootstrap_ascending::account_scan::prepare_request (const nano::accou
 	return { tag, request };
 }
 
-void nano::bootstrap_ascending::account_scan::run_one ()
+void nano::bootstrap_ascending::priority_accounts::run_one ()
 {
 	// Ensure there is enough space in blockprocessor for queuing new blocks
 	wait_blockprocessor ();
@@ -184,7 +184,7 @@ void nano::bootstrap_ascending::account_scan::run_one ()
 - Marks an account as blocked if the result code is gap source as there is no reason request additional blocks for this account until the dependency is resolved
 - Marks an account as forwarded if it has been recently referenced by a block that has been inserted.
  */
-void nano::bootstrap_ascending::account_scan::inspect (store::transaction const & tx, nano::process_return const & result, nano::block const & block)
+void nano::bootstrap_ascending::priority_accounts::inspect (store::transaction const & tx, nano::process_return const & result, nano::block const & block)
 {
 	debug_assert (!mutex.try_lock ());
 
@@ -251,7 +251,7 @@ void nano::bootstrap_ascending::account_scan::inspect (store::transaction const 
 	}
 }
 
-nano::account nano::bootstrap_ascending::account_scan::available_account ()
+nano::account nano::bootstrap_ascending::priority_accounts::available_account ()
 {
 	debug_assert (!mutex.try_lock ());
 
@@ -259,7 +259,7 @@ nano::account nano::bootstrap_ascending::account_scan::available_account ()
 		auto account = accounts.next ();
 		if (!account.is_zero ())
 		{
-			stats.inc (nano::stat::type::ascendboot_account_scan, nano::stat::detail::next_priority);
+			stats.inc (nano::stat::type::ascendboot_priority_accounts, nano::stat::detail::next_priority);
 			return account;
 		}
 	}
@@ -269,16 +269,16 @@ nano::account nano::bootstrap_ascending::account_scan::available_account ()
 		auto account = iterator.next ();
 		if (!account.is_zero ())
 		{
-			stats.inc (nano::stat::type::ascendboot_account_scan, nano::stat::detail::next_database);
+			stats.inc (nano::stat::type::ascendboot_priority_accounts, nano::stat::detail::next_database);
 			return account;
 		}
 	}
 
-	stats.inc (nano::stat::type::ascendboot_account_scan, nano::stat::detail::next_none);
+	stats.inc (nano::stat::type::ascendboot_priority_accounts, nano::stat::detail::next_none);
 	return { 0 };
 }
 
-nano::account nano::bootstrap_ascending::account_scan::wait_available_account ()
+nano::account nano::bootstrap_ascending::priority_accounts::wait_available_account ()
 {
 	nano::unique_lock<nano::mutex> lock{ mutex };
 	while (!stopped)
@@ -297,7 +297,7 @@ nano::account nano::bootstrap_ascending::account_scan::wait_available_account ()
 	return { 0 };
 }
 
-void nano::bootstrap_ascending::account_scan::wait_blockprocessor ()
+void nano::bootstrap_ascending::priority_accounts::wait_blockprocessor ()
 {
 	nano::unique_lock<nano::mutex> lock{ mutex };
 	while (!stopped)
@@ -323,7 +323,7 @@ void nano::bootstrap_ascending::account_scan::wait_blockprocessor ()
  * - nothing_new: when received response indicates that the account chain does not have more blocks
  * - ok: otherwise, if all checks pass
  */
-auto nano::bootstrap_ascending::account_scan::tag::verify (const nano::asc_pull_ack::blocks_payload & response) const -> verify_result
+auto nano::bootstrap_ascending::priority_accounts::tag::verify (const nano::asc_pull_ack::blocks_payload & response) const -> verify_result
 {
 	auto const & blocks = response.blocks;
 
@@ -379,7 +379,7 @@ auto nano::bootstrap_ascending::account_scan::tag::verify (const nano::asc_pull_
 	return verify_result::ok;
 }
 
-std::unique_ptr<nano::container_info_component> nano::bootstrap_ascending::account_scan::collect_container_info (const std::string & name)
+std::unique_ptr<nano::container_info_component> nano::bootstrap_ascending::priority_accounts::collect_container_info (const std::string & name)
 {
 	nano::lock_guard<nano::mutex> lock{ mutex };
 

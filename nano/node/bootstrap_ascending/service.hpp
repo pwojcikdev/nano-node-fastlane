@@ -5,9 +5,9 @@
 #include <nano/lib/observer_set.hpp>
 #include <nano/lib/timer.hpp>
 #include <nano/node/bandwidth_limiter.hpp>
-#include <nano/node/bootstrap_ascending/account_scan.hpp>
 #include <nano/node/bootstrap_ascending/common.hpp>
 #include <nano/node/bootstrap_ascending/peer_scoring.hpp>
+#include <nano/node/bootstrap_ascending/priority_accounts.hpp>
 #include <nano/node/bootstrap_server.hpp>
 
 #include <boost/multi_index/hashed_index.hpp>
@@ -85,10 +85,10 @@ private: // Dependencies
 	nano::stats & stats;
 
 public: // Strategies
-	nano::bootstrap_ascending::account_scan account_scan;
+	nano::bootstrap_ascending::priority_accounts priority;
 	nano::bootstrap_ascending::lazy_pulling lazy_pulling;
 
-	using tag_strategy_variant = std::variant<account_scan::tag, lazy_pulling::tag>;
+	using tag_strategy_variant = std::variant<nano::bootstrap_ascending::priority_accounts::tag, nano::bootstrap_ascending::lazy_pulling::tag>;
 
 	bool request (tag_strategy_variant const &, nano::asc_pull_req::payload_variant const &);
 
@@ -113,8 +113,8 @@ private:
 	std::shared_ptr<nano::transport::channel> wait_available_channel ();
 
 public:
-	void process (nano::asc_pull_ack::blocks_payload const & response, account_scan::tag const &);
-	void process (nano::asc_pull_ack::account_info_payload const & response, lazy_pulling::tag const &);
+	void process (nano::asc_pull_ack::blocks_payload const & response, nano::bootstrap_ascending::priority_accounts::tag const &);
+	void process (nano::asc_pull_ack::account_info_payload const & response, nano::bootstrap_ascending::lazy_pulling::tag const &);
 
 private:
 	// clang-format off

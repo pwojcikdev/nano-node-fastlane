@@ -21,7 +21,7 @@ namespace nano::bootstrap_ascending
 class service;
 class config;
 
-class account_scan final
+class priority_accounts final
 {
 public:
 	class tag : public nano::bootstrap_ascending::tag_base<tag, nano::asc_pull_ack::blocks_payload>
@@ -48,13 +48,13 @@ public:
 	};
 
 public:
-	account_scan (nano::bootstrap_ascending::config const &, nano::bootstrap_ascending::service &, nano::ledger &, nano::network_constants &, nano::block_processor &, nano::stats &);
-	~account_scan ();
+	priority_accounts (nano::bootstrap_ascending::config const &, nano::bootstrap_ascending::service &, nano::ledger &, nano::network_constants &, nano::block_processor &, nano::stats &);
+	~priority_accounts ();
 
 	void start ();
 	void stop ();
 
-	void process (nano::asc_pull_ack::blocks_payload const & response, account_scan::tag const &);
+	void process (nano::asc_pull_ack::blocks_payload const & response, tag const &);
 	void cleanup ();
 
 	std::size_t blocked_size () const;
