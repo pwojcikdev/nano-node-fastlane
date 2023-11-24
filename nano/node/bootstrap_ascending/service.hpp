@@ -53,7 +53,6 @@ public:
 	std::size_t database_rate_limit{ 1024 };
 	std::size_t pull_count{ nano::bootstrap_server::max_blocks };
 	std::chrono::milliseconds timeout{ 1000 * 3 };
-	std::size_t throttle_coefficient{ 16 };
 	std::chrono::milliseconds throttle_wait{ 100 };
 
 	account_sets_config account_sets;

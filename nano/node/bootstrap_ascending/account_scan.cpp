@@ -25,7 +25,6 @@ nano::bootstrap_ascending::account_scan::account_scan (const nano::bootstrap_asc
 	stats{ stats_a },
 	accounts{ config.account_sets, stats },
 	iterator{ ledger.store },
-	throttle{ compute_throttle_size () },
 	database_limiter{ config.database_rate_limit, 1.0 }
 {
 	block_processor.batch_processed.add ([this] (auto const & batch) {
@@ -105,9 +104,6 @@ void nano::bootstrap_ascending::account_scan::process (const nano::asc_pull_ack:
 			{
 				block_processor.add (block, nano::block_processor::block_source::bootstrap);
 			}
-
-			nano::lock_guard<nano::mutex> lock{ mutex };
-			throttle.add (true);
 		}
 		break;
 		case nothing_new:
@@ -116,7 +112,6 @@ void nano::bootstrap_ascending::account_scan::process (const nano::asc_pull_ack:
 
 			nano::lock_guard<nano::mutex> lock{ mutex };
 			accounts.priority_down (tag.account);
-			throttle.add (false);
 		}
 		break;
 		case invalid:
@@ -130,8 +125,6 @@ void nano::bootstrap_ascending::account_scan::process (const nano::asc_pull_ack:
 
 void nano::bootstrap_ascending::account_scan::cleanup ()
 {
-	nano::lock_guard<nano::mutex> lock{ mutex };
-	throttle.resize (compute_throttle_size ());
 }
 
 void nano::bootstrap_ascending::account_scan::run ()
@@ -144,7 +137,6 @@ void nano::bootstrap_ascending::account_scan::run ()
 		lock.unlock ();
 		run_one ();
 		lock.lock ();
-		throttle_if_needed (lock);
 	}
 }
 
@@ -325,24 +317,6 @@ void nano::bootstrap_ascending::account_scan::wait_blockprocessor ()
 	}
 }
 
-void nano::bootstrap_ascending::account_scan::throttle_if_needed (nano::unique_lock<nano::mutex> & lock)
-{
-	debug_assert (lock.owns_lock ());
-	if (!iterator.warmup () && throttle.throttled ())
-	{
-		stats.inc (nano::stat::type::ascendboot_account_scan, nano::stat::detail::throttled);
-		condition.wait_for (lock, config.throttle_wait, [this] () { return stopped; });
-	}
-}
-
-std::size_t nano::bootstrap_ascending::account_scan::compute_throttle_size () const
-{
-	// Scales logarithmically with ledger block
-	// Returns: config.throttle_coefficient * sqrt(block_count)
-	std::size_t size_new = config.throttle_coefficient * std::sqrt (ledger.cache.block_count.load ());
-	return size_new < 16 ? 16 : size_new;
-}
-
 /**
  * Verifies whether the received response is valid. Returns:
  * - invalid: when received blocks do not correspond to requested hash/account or they do not make a valid chain
@@ -410,8 +384,6 @@ std::unique_ptr<nano::container_info_component> nano::bootstrap_ascending::accou
 	nano::lock_guard<nano::mutex> lock{ mutex };
 
 	auto composite = std::make_unique<container_info_composite> (name);
-	composite->add_component (std::make_unique<container_info_leaf> (container_info{ "throttle", throttle.size (), 0 }));
-	composite->add_component (std::make_unique<container_info_leaf> (container_info{ "throttle_successes", throttle.successes (), 0 }));
 	composite->add_component (accounts.collect_container_info ("accounts"));
 	return composite;
 }

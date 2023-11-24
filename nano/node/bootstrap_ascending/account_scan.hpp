@@ -85,14 +85,9 @@ private:
 	/* Throttles requesting new blocks, not to overwhelm blockprocessor */
 	void wait_blockprocessor ();
 
-	void throttle_if_needed (nano::unique_lock<nano::mutex> & lock);
-	// Calculates a lookback size based on the size of the ledger where larger ledgers have a larger sample count
-	std::size_t compute_throttle_size () const;
-
 private:
 	nano::bootstrap_ascending::account_sets accounts;
 	nano::bootstrap_ascending::buffered_iterator iterator;
-	nano::bootstrap_ascending::throttle throttle;
 
 	// Requests for accounts from database have much lower hitrate and could introduce strain on the network
 	// A separate (lower) limiter ensures that we always reserve resources for querying accounts from priority queue

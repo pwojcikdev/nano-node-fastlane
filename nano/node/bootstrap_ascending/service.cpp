@@ -210,8 +210,6 @@ nano::error nano::bootstrap_ascending::config::deserialize (nano::tomlconfig & t
 	toml.get ("timeout", timeout_l);
 	timeout = std::chrono::milliseconds{ timeout_l };
 
-	toml.get ("throttle_coefficient", throttle_coefficient);
-
 	auto throttle_wait_l = throttle_wait.count ();
 	toml.get ("throttle_wait", throttle_wait_l);
 	throttle_wait = std::chrono::milliseconds{ throttle_wait_l };
@@ -231,7 +229,6 @@ nano::error nano::bootstrap_ascending::config::serialize (nano::tomlconfig & tom
 	toml.put ("database_rate_limit", database_rate_limit, "Rate limit on random sampling accounts from ledger.\nNote: changing to unlimited (0) is not recommended as this operation competes for resources on querying the database.\ntype:uint64");
 	toml.put ("pull_count", pull_count, "Number of requested blocks for ascending bootstrap request.\ntype:uint64");
 	toml.put ("timeout", timeout.count (), "Timeout in milliseconds for incoming ascending bootstrap messages to be processed.\ntype:milliseconds");
-	toml.put ("throttle_coefficient", throttle_coefficient, "Scales the number of samples to track for bootstrap throttling.\ntype:uint64");
 	toml.put ("throttle_wait", throttle_wait.count (), "Length of time to wait between requests when throttled.\ntype:milliseconds");
 
 	nano::tomlconfig account_sets_l;
