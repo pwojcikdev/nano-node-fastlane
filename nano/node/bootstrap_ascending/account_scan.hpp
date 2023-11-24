@@ -7,6 +7,8 @@
 #include <nano/node/bootstrap_ascending/throttle.hpp>
 #include <nano/node/messages.hpp>
 
+#include <thread>
+
 namespace nano
 {
 class block_processor;
