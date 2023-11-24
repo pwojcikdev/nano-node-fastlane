@@ -48,13 +48,14 @@ void nano::bootstrap_ascending::service::start ()
 
 void nano::bootstrap_ascending::service::stop ()
 {
-	account_scan.stop ();
-
 	{
 		nano::lock_guard<nano::mutex> lock{ mutex };
 		stopped = true;
 	}
 	condition.notify_all ();
+
+	account_scan.stop ();
+
 	nano::join_or_pass (thread);
 }
 
