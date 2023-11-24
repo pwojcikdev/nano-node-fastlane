@@ -88,6 +88,9 @@ std::string nano::thread_role::get_string (nano::thread_role::name role)
 		case nano::thread_role::name::ascendboot_account_scan:
 			thread_role_name_string = "Ascboot Accnts";
 			break;
+		case nano::thread_role::name::ascendboot_ledger_scan:
+			thread_role_name_string = "Ascboot Ledger";
+			break;
 		case nano::thread_role::name::bootstrap_server:
 			thread_role_name_string = "Bootstrap serv";
 			break;

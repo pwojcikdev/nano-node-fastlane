@@ -21,21 +21,16 @@ namespace nano::bootstrap_ascending
 class service;
 class config;
 
-class priority_accounts final
+class ledger_scan final
 {
 public:
-public:
-	priority_accounts (nano::bootstrap_ascending::config const &, nano::bootstrap_ascending::service &, nano::ledger &, nano::network_constants &, nano::block_processor &, nano::stats &);
-	~priority_accounts ();
+	ledger_scan (nano::bootstrap_ascending::config const &, nano::bootstrap_ascending::service &, nano::ledger &, nano::network_constants &, nano::block_processor &, nano::stats &);
+	~ledger_scan ();
 
 	void start ();
 	void stop ();
 
-	void process (nano::asc_pull_ack::blocks_payload const & response, pull_blocks_tag const &, pull_blocks_tag::verify_result);
 	void cleanup ();
-
-	std::size_t blocked_size () const;
-	std::size_t priority_size () const;
 
 	std::unique_ptr<nano::container_info_component> collect_container_info (std::string const & name);
 
@@ -50,15 +45,15 @@ private: // Dependencies
 private:
 	void run ();
 	void run_one ();
-
-	/* Inspects a block that has been processed by the block processor */
-	void inspect (store::transaction const &, nano::process_return const & result, nano::block const & block);
-
-	/* Waits until a suitable account outside of cool down period is available */
 	nano::account wait_account ();
+	nano::account next_account ();
 
 private:
-	nano::bootstrap_ascending::account_sets accounts;
+	nano::bootstrap_ascending::buffered_iterator iterator;
+
+	// Requests for accounts from database have much lower hitrate and could introduce strain on the network
+	// A separate (lower) limiter ensures that we always reserve resources for querying accounts from priority queue
+	nano::bandwidth_limiter limiter;
 
 	bool stopped{ false };
 	mutable nano::mutex mutex;

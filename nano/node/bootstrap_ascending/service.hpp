@@ -6,6 +6,7 @@
 #include <nano/lib/timer.hpp>
 #include <nano/node/bandwidth_limiter.hpp>
 #include <nano/node/bootstrap_ascending/common.hpp>
+#include <nano/node/bootstrap_ascending/ledger_scan.hpp>
 #include <nano/node/bootstrap_ascending/peer_scoring.hpp>
 #include <nano/node/bootstrap_ascending/priority_accounts.hpp>
 #include <nano/node/bootstrap_server.hpp>
@@ -54,6 +55,12 @@ public:
 	std::size_t pull_count{ nano::bootstrap_server::max_blocks };
 	std::chrono::milliseconds timeout{ 1000 * 5 };
 	std::chrono::milliseconds throttle_wait{ 100 };
+	std::size_t block_processor_threshold{ 1024 };
+
+	// Strategies
+	bool enable_priority{ true };
+	bool enable_ledger_scan{ true };
+	bool enable_lazy{ true };
 
 	account_sets_config account_sets;
 };
@@ -72,6 +79,11 @@ public:
 	 */
 	void process (nano::asc_pull_ack const & message, std::shared_ptr<nano::transport::channel> const & channel);
 
+	/**
+	 * Wait until the block processor is not busy
+	 */
+	void wait_block_processor () const;
+
 public: // Info
 	std::unique_ptr<nano::container_info_component> collect_container_info (std::string const & name);
 	std::size_t score_size () const;
@@ -86,11 +98,14 @@ private: // Dependencies
 
 public: // Strategies
 	nano::bootstrap_ascending::priority_accounts priority;
+	nano::bootstrap_ascending::ledger_scan ledger_scan;
 	nano::bootstrap_ascending::lazy_pulling lazy_pulling;
 
-	using tag_strategy_variant = std::variant<nano::bootstrap_ascending::priority_accounts::tag, nano::bootstrap_ascending::lazy_pulling::tag>;
+	using tag_strategy_variant = std::variant<pull_blocks_tag, nano::bootstrap_ascending::lazy_pulling::tag>;
 
+	// These should only be used by strategies
 	bool request (tag_strategy_variant const &, nano::asc_pull_req::payload_variant const &);
+	bool request_account (nano::account);
 
 public: // Tag
 	struct async_tag
@@ -113,7 +128,7 @@ private:
 	std::shared_ptr<nano::transport::channel> wait_available_channel ();
 
 public:
-	void process (nano::asc_pull_ack::blocks_payload const & response, nano::bootstrap_ascending::priority_accounts::tag const &);
+	void process (nano::asc_pull_ack::blocks_payload const & response, nano::bootstrap_ascending::pull_blocks_tag const &);
 	void process (nano::asc_pull_ack::account_info_payload const & response, nano::bootstrap_ascending::lazy_pulling::tag const &);
 
 private:

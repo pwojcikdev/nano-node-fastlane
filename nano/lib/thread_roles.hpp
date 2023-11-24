@@ -38,6 +38,7 @@ enum class name
 	telemetry,
 	ascendboot,
 	ascendboot_account_scan,
+	ascendboot_ledger_scan,
 	scheduler_hinted,
 	scheduler_manual,
 	scheduler_optimistic,

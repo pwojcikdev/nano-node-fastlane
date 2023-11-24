@@ -122,19 +122,19 @@ TEST (bootstrap_ascending, profile)
 	nano::mutex mutex;
 	std::unordered_map<uint64_t, entry> requests;
 
-	server->bootstrap_server.on_response.add ([&] (auto & response, auto & channel) {
-		nano::lock_guard<nano::mutex> lock{ mutex };
-
-		if (requests.count (response.id))
-		{
-			requests[response.id].replied = true;
-			requests[response.id].reply_channel = channel;
-		}
-		else
-		{
-			std::cerr << "unknown response: " << response.id << std::endl;
-		}
-	});
+	//	server->bootstrap_server.on_response.add ([&] (auto & response, auto & channel) {
+	//		nano::lock_guard<nano::mutex> lock{ mutex };
+	//
+	//		if (requests.count (response.id))
+	//		{
+	//			requests[response.id].replied = true;
+	//			requests[response.id].reply_channel = channel;
+	//		}
+	//		else
+	//		{
+	//			std::cerr << "unknown response: " << response.id << std::endl;
+	//		}
+	//	});
 
 	//	client->ascendboot.on_request.add ([&] (auto & tag, auto & channel) {
 	//		nano::lock_guard<nano::mutex> lock{ mutex };
@@ -142,11 +142,11 @@ TEST (bootstrap_ascending, profile)
 	//		requests[tag.id] = { tag, channel };
 	//	});
 
-	client->ascendboot.on_reply.add ([&] (auto & tag) {
-		nano::lock_guard<nano::mutex> lock{ mutex };
-
-		requests[tag.id].received = true;
-	});
+	//	client->ascendboot.on_reply.add ([&] (auto & tag) {
+	//		nano::lock_guard<nano::mutex> lock{ mutex };
+	//
+	//		requests[tag.id].received = true;
+	//	});
 
 	/*client->ascendboot.on_timeout.add ([&] (auto & tag) {
 		nano::lock_guard<nano::mutex> lock{ mutex };

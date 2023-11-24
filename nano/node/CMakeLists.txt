@@ -45,12 +45,15 @@ add_library(
   bootstrap/bootstrap.hpp
   bootstrap/bootstrap.cpp
   bootstrap_ascending/common.hpp
+  bootstrap_ascending/common.cpp
   bootstrap_ascending/throttle.hpp
   bootstrap_ascending/throttle.cpp
   bootstrap_ascending/account_sets.hpp
   bootstrap_ascending/account_sets.cpp
   bootstrap_ascending/iterators.hpp
   bootstrap_ascending/iterators.cpp
+        bootstrap_ascending/ledger_scan.hpp
+        bootstrap_ascending/ledger_scan.cpp
   bootstrap_ascending/peer_scoring.hpp
   bootstrap_ascending/peer_scoring.cpp
   bootstrap_ascending/priority_accounts.hpp

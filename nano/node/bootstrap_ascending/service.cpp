@@ -24,6 +24,7 @@ nano::bootstrap_ascending::service::service (nano::node_config & config_a, nano:
 	network{ network_a },
 	stats{ stats_a },
 	priority{ config.bootstrap_ascending, *this, ledger, network_consts, block_processor, stats },
+	ledger_scan{ config.bootstrap_ascending, *this, ledger, network_consts, block_processor, stats },
 	scoring{ config.bootstrap_ascending, config.network_params.network }
 {
 }
@@ -62,6 +63,26 @@ std::size_t nano::bootstrap_ascending::service::score_size () const
 {
 	nano::lock_guard<nano::mutex> lock{ mutex };
 	return scoring.size ();
+}
+
+void nano::bootstrap_ascending::service::wait_block_processor () const
+{
+	nano::unique_lock<nano::mutex> lock{ mutex };
+	while (!stopped)
+	{
+		lock.unlock ();
+
+		// Do not check blockprocessor when holding a lock as it may cause a deadlock
+		if (block_processor.size () > config.bootstrap_ascending.block_processor_threshold)
+		{
+			lock.lock ();
+			condition.wait_for (lock, config.bootstrap_ascending.throttle_wait, [this] () { return stopped; });
+		}
+		else
+		{
+			return;
+		}
+	}
 }
 
 std::shared_ptr<nano::transport::channel> nano::bootstrap_ascending::service::wait_available_channel ()
@@ -105,6 +126,30 @@ bool nano::bootstrap_ascending::service::request (const nano::bootstrap_ascendin
 	nano::transport::buffer_drop_policy::limiter, nano::transport::traffic_type::bootstrap);
 
 	return true; // Request sent
+}
+
+bool nano::bootstrap_ascending::service::request_account (nano::account account)
+{
+	nano::bootstrap_ascending::pull_blocks_tag tag{ account };
+	nano::asc_pull_req::blocks_payload payload{};
+	payload.count = config.bootstrap_ascending.pull_count;
+
+	// Check if the account picked has blocks, if it does, start the pull from the highest block
+	auto info = ledger.store.account.get (ledger.store.tx_begin_read (), account);
+	if (info)
+	{
+		tag.type = pull_blocks_tag::query_type::blocks_by_hash;
+		tag.start = payload.start = info->head;
+		payload.start_type = nano::asc_pull_req::hash_type::block;
+	}
+	else
+	{
+		tag.type = pull_blocks_tag::query_type::blocks_by_account;
+		tag.start = payload.start = account;
+		payload.start_type = nano::asc_pull_req::hash_type::account;
+	}
+
+	return request (tag, payload);
 }
 
 void nano::bootstrap_ascending::service::run ()
@@ -169,9 +214,37 @@ void nano::bootstrap_ascending::service::process (nano::asc_pull_ack const & mes
 	}
 }
 
-void nano::bootstrap_ascending::service::process (const nano::asc_pull_ack::blocks_payload & response, const nano::bootstrap_ascending::priority_accounts::tag & tag)
+void nano::bootstrap_ascending::service::process (const nano::asc_pull_ack::blocks_payload & response, const pull_blocks_tag & tag)
 {
-	priority.process (response, tag);
+	auto const result = tag.verify (response);
+
+	priority.process (response, tag, result);
+
+	switch (result)
+	{
+		using enum nano::bootstrap_ascending::pull_blocks_tag::verify_result;
+
+		case ok:
+		{
+			stats.add (nano::stat::type::ascendboot, nano::stat::detail::blocks, nano::stat::dir::in, response.blocks.size ());
+
+			for (auto & block : response.blocks)
+			{
+				block_processor.add (block, nano::block_processor::block_source::bootstrap);
+			}
+		}
+		break;
+		case nothing_new:
+		{
+			stats.inc (nano::stat::type::ascendboot, nano::stat::detail::nothing_new);
+		}
+		break;
+		case invalid:
+		{
+			stats.inc (nano::stat::type::ascendboot, nano::stat::detail::invalid);
+		}
+		break;
+	}
 }
 
 void nano::bootstrap_ascending::service::process (const nano::asc_pull_ack::account_info_payload & response, const nano::bootstrap_ascending::lazy_pulling::tag & tag)

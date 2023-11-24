@@ -35,4 +35,31 @@ public:
 		debug_assert (false, "invalid payload");
 	}
 };
-} // nano::bootstrap_ascending
+
+class pull_blocks_tag : public tag_base<pull_blocks_tag, nano::asc_pull_ack::blocks_payload>
+{
+public:
+	enum class query_type
+	{
+		blocks_by_hash,
+		blocks_by_account,
+	};
+
+	const nano::account account{};
+	nano::hash_or_account start{};
+	query_type type{};
+
+	explicit pull_blocks_tag (nano::account account) :
+		account{ account } {};
+
+public: // Verify
+	enum class verify_result
+	{
+		ok,
+		nothing_new,
+		invalid,
+	};
+
+	verify_result verify (nano::asc_pull_ack::blocks_payload const & response) const;
+};
+}
