@@ -5,10 +5,10 @@
 #include <nano/lib/observer_set.hpp>
 #include <nano/lib/timer.hpp>
 #include <nano/node/bandwidth_limiter.hpp>
-#include <nano/node/bootstrap/bootstrap_server.hpp>
 #include <nano/node/bootstrap_ascending/account_scan.hpp>
 #include <nano/node/bootstrap_ascending/common.hpp>
 #include <nano/node/bootstrap_ascending/peer_scoring.hpp>
+#include <nano/node/bootstrap_server.hpp>
 
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
