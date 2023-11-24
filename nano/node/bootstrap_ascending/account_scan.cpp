@@ -61,7 +61,7 @@ void nano::bootstrap_ascending::account_scan::start ()
 	debug_assert (!thread.joinable ());
 
 	thread = std::thread ([this] () {
-		nano::thread_role::set (nano::thread_role::name::ascending_bootstrap);
+		nano::thread_role::set (nano::thread_role::name::ascendboot_account_scan);
 		run ();
 	});
 }
