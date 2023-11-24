@@ -39,7 +39,7 @@ void nano::bootstrap_ascending::service::start ()
 	debug_assert (!thread.joinable ());
 
 	thread = std::thread ([this] () {
-		nano::thread_role::set (nano::thread_role::name::ascending_bootstrap);
+		nano::thread_role::set (nano::thread_role::name::ascendboot);
 		run ();
 	});
 

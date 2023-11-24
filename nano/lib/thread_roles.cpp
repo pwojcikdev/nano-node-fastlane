@@ -82,8 +82,11 @@ std::string nano::thread_role::get_string (nano::thread_role::name role)
 		case nano::thread_role::name::vote_generator_queue:
 			thread_role_name_string = "Voting que";
 			break;
-		case nano::thread_role::name::ascending_bootstrap:
-			thread_role_name_string = "Bootstrap asc";
+		case nano::thread_role::name::ascendboot:
+			thread_role_name_string = "Ascboot";
+			break;
+		case nano::thread_role::name::ascendboot_account_scan:
+			thread_role_name_string = "Ascboot Accnts";
 			break;
 		case nano::thread_role::name::bootstrap_server:
 			thread_role_name_string = "Bootstrap serv";
