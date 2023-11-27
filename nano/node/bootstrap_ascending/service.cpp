@@ -53,10 +53,11 @@ void nano::bootstrap_ascending::service::stop ()
 		nano::lock_guard<nano::mutex> lock{ mutex };
 		stopped = true;
 	}
-	condition.notify_all ();
-	nano::join_or_pass (thread);
 
 	priority.stop ();
+
+	condition.notify_all ();
+	nano::join_or_pass (thread);
 }
 
 std::size_t nano::bootstrap_ascending::service::score_size () const
