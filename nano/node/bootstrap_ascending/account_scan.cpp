@@ -310,12 +310,8 @@ void nano::bootstrap_ascending::account_scan::wait_blockprocessor ()
 	nano::unique_lock<nano::mutex> lock{ mutex };
 	while (!stopped)
 	{
-		lock.unlock ();
-
-		// Do not check blockprocessor when holding a lock as it may cause a deadlock
-		if (block_processor.size () > 1024)
+		if (block_processor.size () > 1000)
 		{
-			lock.lock ();
 			condition.wait_for (lock, config.throttle_wait, [this] () { return stopped; });
 		}
 		else
