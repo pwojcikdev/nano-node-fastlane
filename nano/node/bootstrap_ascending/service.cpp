@@ -70,12 +70,8 @@ void nano::bootstrap_ascending::service::wait_block_processor () const
 	nano::unique_lock<nano::mutex> lock{ mutex };
 	while (!stopped)
 	{
-		lock.unlock ();
-
-		// Do not check blockprocessor when holding a lock as it may cause a deadlock
 		if (block_processor.size () > config.bootstrap_ascending.block_processor_threshold)
 		{
-			lock.lock ();
 			condition.wait_for (lock, config.bootstrap_ascending.throttle_wait, [this] () { return stopped; });
 		}
 		else
