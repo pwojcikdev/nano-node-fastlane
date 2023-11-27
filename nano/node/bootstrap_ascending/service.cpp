@@ -45,6 +45,7 @@ void nano::bootstrap_ascending::service::start ()
 	});
 
 	priority.start ();
+	ledger_scan.start ();
 }
 
 void nano::bootstrap_ascending::service::stop ()
@@ -55,6 +56,7 @@ void nano::bootstrap_ascending::service::stop ()
 	}
 
 	priority.stop ();
+	ledger_scan.stop ();
 
 	condition.notify_all ();
 	nano::join_or_pass (thread);
