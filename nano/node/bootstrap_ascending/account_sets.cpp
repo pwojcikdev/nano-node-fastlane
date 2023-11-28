@@ -32,7 +32,9 @@ void nano::bootstrap_ascending::account_sets::priority_up (nano::account const &
 		}
 		else
 		{
-			priorities.get<tag_account> ().insert ({ account, account_sets::priority_initial });
+			auto [it, inserted] = priorities.get<tag_account> ().insert ({ account, account_sets::priority_initial });
+			debug_assert (inserted);
+
 			stats.inc (nano::stat::type::ascendboot_account_sets, nano::stat::detail::priority_insert);
 
 			trim_overflow ();

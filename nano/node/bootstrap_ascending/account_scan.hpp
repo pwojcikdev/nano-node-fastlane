@@ -33,7 +33,7 @@ public:
 			blocks_by_account,
 		};
 
-		const nano::account account{};
+		nano::account account{};
 		nano::hash_or_account start{};
 		query_type type{};
 

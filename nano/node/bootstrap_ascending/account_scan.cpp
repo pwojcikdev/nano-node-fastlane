@@ -151,6 +151,8 @@ void nano::bootstrap_ascending::account_scan::run ()
 auto nano::bootstrap_ascending::account_scan::prepare_request (const nano::account account) -> std::pair<tag, nano::asc_pull_req::blocks_payload>
 {
 	tag tag{};
+	tag.account = account;
+
 	nano::asc_pull_req::blocks_payload request{};
 	request.count = config.pull_count;
 
@@ -168,6 +170,9 @@ auto nano::bootstrap_ascending::account_scan::prepare_request (const nano::accou
 		tag.start = request.start = account;
 		request.start_type = nano::asc_pull_req::hash_type::account;
 	}
+
+	debug_assert (!tag.account.is_zero ());
+	debug_assert (!tag.start.is_zero ());
 
 	return { tag, request };
 }
