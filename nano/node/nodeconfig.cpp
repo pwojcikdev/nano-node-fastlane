@@ -78,6 +78,12 @@ nano::node_config::node_config (const std::optional<uint16_t> & peering_port_a, 
 			debug_assert (false);
 			break;
 	}
+
+	// Print preconfigured peers
+	for (auto const & peer : preconfigured_peers)
+	{
+		std::cout << "Preconfigured peer: " << peer << std::endl;
+	}
 }
 
 nano::error nano::node_config::serialize_toml (nano::tomlconfig & toml) const
@@ -468,10 +474,6 @@ nano::error nano::node_config::deserialize_toml (nano::tomlconfig & toml)
 		if (io_threads == 0)
 		{
 			toml.get_error ().set ("io_threads must be non-zero");
-		}
-		if (active_elections_size <= 250 && !network_params.network.is_dev_network ())
-		{
-			toml.get_error ().set ("active_elections_size must be greater than 250");
 		}
 		if (bandwidth_limit > std::numeric_limits<std::size_t>::max ())
 		{

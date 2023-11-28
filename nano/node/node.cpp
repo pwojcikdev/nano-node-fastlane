@@ -64,6 +64,8 @@ nano::outbound_bandwidth_limiter::config nano::outbound_bandwidth_limiter_config
 
 void nano::node::keepalive (std::string const & address_a, uint16_t port_a)
 {
+	logger.always_log (boost::str (boost::format ("Initiating keepalive to %1%:%2%") % address_a % port_a));
+
 	auto node_l (shared_from_this ());
 	network.resolver.async_resolve (boost::asio::ip::udp::resolver::query (address_a, std::to_string (port_a)), [node_l, address_a, port_a] (boost::system::error_code const & ec, boost::asio::ip::udp::resolver::iterator i_a) {
 		if (!ec)
@@ -85,7 +87,7 @@ void nano::node::keepalive (std::string const & address_a, uint16_t port_a)
 		}
 		else
 		{
-			node_l->logger.try_log (boost::str (boost::format ("Error resolving address: %1%:%2%: %3%") % address_a % port_a % ec.message ()));
+			node_l->logger.always_log (boost::str (boost::format ("Error resolving address: %1%:%2%: %3%") % address_a % port_a % ec.message ()));
 		}
 	});
 }

@@ -113,9 +113,14 @@ void nano::rep_crawler::ongoing_crawl ()
 	validate ();
 	query (get_crawl_targets (total_weight_l));
 	auto sufficient_weight (total_weight_l > node.online_reps.delta ());
+
+	node.logger.always_log (boost::str (boost::format ("Total principal representative weight: %1%") % total_weight_l.convert_to<std::string> ()));
+
 	// If online weight drops below minimum, reach out to preconfigured peers
 	if (!sufficient_weight)
 	{
+		node.logger.always_log ("Insufficient principal representative weight, reaching out to preconfigured peers");
+
 		node.keepalive_preconfigured (node.config.preconfigured_peers);
 	}
 	// Reduce crawl frequency when there's enough total peer weight

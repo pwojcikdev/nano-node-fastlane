@@ -67,6 +67,8 @@ bool nano::block_processor::half_full ()
 
 void nano::block_processor::add (std::shared_ptr<nano::block> const & block, block_source const source)
 {
+	debug_assert (source == block_source::bootstrap || source == block_source::unchecked);
+
 	if (full ())
 	{
 		node.stats.inc (nano::stat::type::blockprocessor, nano::stat::detail::overfill);
@@ -83,6 +85,8 @@ void nano::block_processor::add (std::shared_ptr<nano::block> const & block, blo
 
 std::optional<nano::process_return> nano::block_processor::add_blocking (std::shared_ptr<nano::block> const & block, block_source const source)
 {
+	debug_assert (false, "add_blocking");
+
 	context ctx{ source };
 	auto future = ctx.get_future ();
 	add_impl (block, std::move (ctx));
