@@ -201,7 +201,7 @@ nano::node::node (boost::asio::io_context & io_ctx_a, std::filesystem::path cons
 	process_live_dispatcher.connect (block_processor);
 
 	unchecked.satisfied.add ([this] (nano::unchecked_info const & info) {
-		this->block_processor.add (info.block);
+		block_processor.add (info.block, nano::block_processor::block_source::unchecked);
 	});
 
 	vote_cache.rep_weight_query = [this] (nano::account const & rep) {

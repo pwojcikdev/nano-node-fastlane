@@ -498,6 +498,8 @@ nano::stat::detail nano::to_stat_detail (block_processor::block_source source)
 			return nano::stat::detail::live;
 		case bootstrap:
 			return nano::stat::detail::bootstrap;
+		case unchecked:
+			return nano::stat::detail::unchecked;
 		case local:
 			return nano::stat::detail::local;
 		case forced:

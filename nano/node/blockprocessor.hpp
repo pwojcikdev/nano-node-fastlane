@@ -31,6 +31,7 @@ public: // Context
 		unknown = 0,
 		live,
 		bootstrap,
+		unchecked,
 		local,
 		forced,
 	};
