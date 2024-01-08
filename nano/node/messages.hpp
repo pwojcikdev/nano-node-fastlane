@@ -572,8 +572,10 @@ public: // Payload
 	asc_pull_type type{ asc_pull_type::invalid };
 	id_t id{ 0 };
 
-	/** Payload depends on `asc_pull_type` */
-	std::variant<empty_payload, blocks_payload, account_info_payload, frontiers_payload> payload;
+	using payload_variant = std::variant<empty_payload, blocks_payload, account_info_payload, frontiers_payload>;
+	payload_variant payload;
+
+	void set_payload (payload_variant const &);
 
 public:
 	/** Size of message without payload */
@@ -672,8 +674,10 @@ public: // Payload
 	asc_pull_type type{ asc_pull_type::invalid };
 	id_t id{ 0 };
 
-	/** Payload depends on `asc_pull_type` */
-	std::variant<empty_payload, blocks_payload, account_info_payload, frontiers_payload> payload;
+	using payload_variant = std::variant<empty_payload, blocks_payload, account_info_payload, frontiers_payload>;
+	payload_variant payload;
+
+	void set_payload (payload_variant const &);
 
 public:
 	/** Size of message without payload */
@@ -682,6 +686,8 @@ public:
 public: // Logging
 	void operator() (nano::object_stream &) const override;
 };
+
+nano::stat::detail to_stat_detail (nano::asc_pull_req::payload_variant const &);
 
 class message_visitor
 {

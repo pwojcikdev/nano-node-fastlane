@@ -1644,6 +1644,32 @@ bool nano::asc_pull_req::verify_consistency () const
 	return true; // Just for convenience of calling from asserts
 }
 
+void nano::asc_pull_req::set_payload (const nano::asc_pull_req::payload_variant & pld)
+{
+	struct type_visitor
+	{
+		nano::asc_pull_type operator() (empty_payload const &)
+		{
+			return asc_pull_type::invalid;
+		}
+		nano::asc_pull_type operator() (blocks_payload const &)
+		{
+			return asc_pull_type::blocks;
+		}
+		nano::asc_pull_type operator() (account_info_payload const &)
+		{
+			return asc_pull_type::account_info;
+		}
+		nano::asc_pull_type operator() (frontiers_payload const &)
+		{
+			return asc_pull_type::frontiers;
+		}
+	};
+
+	payload = pld;
+	type = std::visit (type_visitor{}, payload);
+}
+
 void nano::asc_pull_req::operator() (nano::object_stream & obs) const
 {
 	nano::message::operator() (obs); // Write common data
@@ -1852,6 +1878,32 @@ bool nano::asc_pull_ack::verify_consistency () const
 	};
 	std::visit (consistency_visitor{ type }, payload);
 	return true; // Just for convenience of calling from asserts
+}
+
+void nano::asc_pull_ack::set_payload (const nano::asc_pull_ack::payload_variant & pld)
+{
+	struct type_visitor
+	{
+		nano::asc_pull_type operator() (empty_payload const &)
+		{
+			return asc_pull_type::invalid;
+		}
+		nano::asc_pull_type operator() (blocks_payload const &)
+		{
+			return asc_pull_type::blocks;
+		}
+		nano::asc_pull_type operator() (account_info_payload const &)
+		{
+			return asc_pull_type::account_info;
+		}
+		nano::asc_pull_type operator() (frontiers_payload const &)
+		{
+			return asc_pull_type::frontiers;
+		}
+	};
+
+	payload = pld;
+	type = std::visit (type_visitor{}, payload);
 }
 
 void nano::asc_pull_ack::operator() (nano::object_stream & obs) const
@@ -2104,4 +2156,38 @@ nano::log::detail nano::to_log_detail (nano::message_type type)
 	}
 	debug_assert (false);
 	return {};
+}
+
+nano::stat::detail nano::to_stat_detail (const nano::asc_pull_req::payload_variant & payload)
+{
+	struct stat_visitor
+	{
+		nano::stat::detail operator() (nano::empty_payload const & pld) const
+		{
+			debug_assert (false, "missing payload");
+			return nano::stat::detail::unknown;
+		}
+		nano::stat::detail operator() (nano::asc_pull_req::blocks_payload const & pld) const
+		{
+			switch (pld.start_type)
+			{
+				using enum nano::asc_pull_req::hash_type;
+				case account:
+					return nano::stat::detail::blocks_by_account_payload;
+				case block:
+					return nano::stat::detail::blocks_by_hash_payload;
+			}
+			debug_assert (false, "unknown type");
+			return nano::stat::detail::unknown;
+		}
+		nano::stat::detail operator() (nano::asc_pull_req::account_info_payload const & pld) const
+		{
+			return nano::stat::detail::account_info_payload;
+		}
+		nano::stat::detail operator() (nano::asc_pull_req::frontiers_payload const & pld) const
+		{
+			return nano::stat::detail::frontiers_payload;
+		}
+	};
+	return std::visit (stat_visitor{}, payload);
 }

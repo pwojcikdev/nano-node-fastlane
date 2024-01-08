@@ -141,10 +141,6 @@ void nano::bootstrap_server::respond (nano::asc_pull_ack & response, std::shared
 	nano::transport::buffer_drop_policy::limiter, nano::transport::traffic_type::bootstrap);
 }
 
-/*
- * Requests
- */
-
 void nano::bootstrap_server::process_batch (std::deque<request_t> & batch)
 {
 	auto transaction = store.tx_begin_read ();
@@ -167,24 +163,27 @@ void nano::bootstrap_server::process_batch (std::deque<request_t> & batch)
 
 nano::asc_pull_ack nano::bootstrap_server::process (store::transaction const & transaction, const nano::asc_pull_req & message)
 {
-	return std::visit ([this, &transaction, &message] (auto && request) { return process (transaction, message.id, request); }, message.payload);
+	auto payload = std::visit ([this, &transaction] (auto && request) { return process (transaction, request); }, message.payload);
+
+	nano::asc_pull_ack response{ network_constants };
+	response.id = message.id;
+	response.set_payload (payload);
+	response.update_header ();
+
+	return response;
 }
 
-nano::asc_pull_ack nano::bootstrap_server::process (const store::transaction &, nano::asc_pull_req::id_t id, const nano::empty_payload & request)
+nano::asc_pull_ack::payload_variant nano::bootstrap_server::process (const store::transaction &, const nano::empty_payload & request)
 {
 	// Empty payload should never be possible, but return empty response anyway
 	debug_assert (false, "missing payload");
-	nano::asc_pull_ack response{ network_constants };
-	response.id = id;
-	response.type = nano::asc_pull_type::invalid;
-	return response;
+	return nano::empty_payload{};
 }
 
 /*
  * Blocks request
  */
-
-nano::asc_pull_ack nano::bootstrap_server::process (store::transaction const & transaction, nano::asc_pull_req::id_t id, nano::asc_pull_req::blocks_payload const & request)
+nano::asc_pull_ack::payload_variant nano::bootstrap_server::process (store::transaction const & transaction, nano::asc_pull_req::blocks_payload const & request)
 {
 	const std::size_t count = std::min (static_cast<std::size_t> (request.count), max_blocks);
 
@@ -194,7 +193,7 @@ nano::asc_pull_ack nano::bootstrap_server::process (store::transaction const & t
 		{
 			if (store.block.exists (transaction, request.start.as_block_hash ()))
 			{
-				return prepare_response (transaction, id, request.start.as_block_hash (), count);
+				return prepare_blocks_response (transaction, request.start.as_block_hash (), count);
 			}
 		}
 		break;
@@ -204,45 +203,25 @@ nano::asc_pull_ack nano::bootstrap_server::process (store::transaction const & t
 			if (info)
 			{
 				// Start from open block if pulling by account
-				return prepare_response (transaction, id, info->open_block, count);
+				return prepare_blocks_response (transaction, info->open_block, count);
 			}
 		}
 		break;
 	}
 
 	// Neither block nor account found, send empty response to indicate that
-	return prepare_empty_blocks_response (id);
+	return nano::asc_pull_ack::blocks_payload{};
 }
 
-nano::asc_pull_ack nano::bootstrap_server::prepare_response (store::transaction const & transaction, nano::asc_pull_req::id_t id, nano::block_hash start_block, std::size_t count)
+nano::asc_pull_ack::payload_variant nano::bootstrap_server::prepare_blocks_response (store::transaction const & transaction, nano::block_hash start_block, std::size_t count)
 {
 	debug_assert (count <= max_blocks); // Should be filtered out earlier
 
 	auto blocks = prepare_blocks (transaction, start_block, count);
 	debug_assert (blocks.size () <= count);
 
-	nano::asc_pull_ack response{ network_constants };
-	response.id = id;
-	response.type = nano::asc_pull_type::blocks;
-
-	nano::asc_pull_ack::blocks_payload response_payload{};
-	response_payload.blocks = blocks;
-	response.payload = response_payload;
-
-	response.update_header ();
-	return response;
-}
-
-nano::asc_pull_ack nano::bootstrap_server::prepare_empty_blocks_response (nano::asc_pull_req::id_t id)
-{
-	nano::asc_pull_ack response{ network_constants };
-	response.id = id;
-	response.type = nano::asc_pull_type::blocks;
-
-	nano::asc_pull_ack::blocks_payload empty_payload{};
-	response.payload = empty_payload;
-
-	response.update_header ();
+	nano::asc_pull_ack::blocks_payload response{};
+	response.blocks = blocks;
 	return response;
 }
 
@@ -262,19 +241,15 @@ std::vector<std::shared_ptr<nano::block>> nano::bootstrap_server::prepare_blocks
 			current = store.block.get (transaction, successor);
 		}
 	}
+
 	return result;
 }
 
 /*
  * Account info request
  */
-
-nano::asc_pull_ack nano::bootstrap_server::process (const store::transaction & transaction, nano::asc_pull_req::id_t id, const nano::asc_pull_req::account_info_payload & request)
+nano::asc_pull_ack::payload_variant nano::bootstrap_server::process (const store::transaction & transaction, const nano::asc_pull_req::account_info_payload & request)
 {
-	nano::asc_pull_ack response{ network_constants };
-	response.id = id;
-	response.type = nano::asc_pull_type::account_info;
-
 	nano::account target{ 0 };
 	switch (request.target_type)
 	{
@@ -291,50 +266,41 @@ nano::asc_pull_ack nano::bootstrap_server::process (const store::transaction & t
 		break;
 	}
 
-	nano::asc_pull_ack::account_info_payload response_payload{};
-	response_payload.account = target;
+	nano::asc_pull_ack::account_info_payload response{};
+	response.account = target;
 
 	auto account_info = ledger.account_info (transaction, target);
 	if (account_info)
 	{
-		response_payload.open = account_info->open_block;
-		response_payload.head = account_info->head;
-		response_payload.block_count = account_info->block_count;
+		response.open = account_info->open_block;
+		response.head = account_info->head;
+		response.block_count = account_info->block_count;
 
 		auto conf_info = store.confirmation_height.get (transaction, target);
 		if (conf_info)
 		{
-			response_payload.conf_frontier = conf_info->frontier;
-			response_payload.conf_height = conf_info->height;
+			response.conf_frontier = conf_info->frontier;
+			response.conf_height = conf_info->height;
 		}
 	}
 	// If account is missing the response payload will contain all 0 fields, except for the target
 
-	response.payload = response_payload;
-	response.update_header ();
 	return response;
 }
 
 /*
  * Frontiers request
  */
-
-nano::asc_pull_ack nano::bootstrap_server::process (const store::transaction & transaction, nano::asc_pull_req::id_t id, const nano::asc_pull_req::frontiers_payload & request)
+nano::asc_pull_ack::payload_variant nano::bootstrap_server::process (const store::transaction & transaction, const nano::asc_pull_req::frontiers_payload & request)
 {
 	debug_assert (request.count <= max_frontiers); // Should be filtered out earlier
 
-	nano::asc_pull_ack response{ network_constants };
-	response.id = id;
-	response.type = nano::asc_pull_type::frontiers;
+	nano::asc_pull_ack::frontiers_payload response{};
 
-	nano::asc_pull_ack::frontiers_payload response_payload{};
-
-	for (auto it = store.account.begin (transaction, request.start), end = store.account.end (); it != end && response_payload.frontiers.size () < request.count; ++it)
+	for (auto it = store.account.begin (transaction, request.start), end = store.account.end (); it != end && response.frontiers.size () < request.count; ++it)
 	{
-		response_payload.frontiers.emplace_back (it->first, it->second.head);
+		response.frontiers.emplace_back (it->first, it->second.head);
 	}
 
-	response.payload = response_payload;
-	response.update_header ();
 	return response;
 }
