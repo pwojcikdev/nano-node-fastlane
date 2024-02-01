@@ -4,8 +4,6 @@
 
 #include <gtest/gtest.h>
 
-#include <boost/none.hpp>
-
 #include <memory>
 #include <vector>
 
@@ -53,7 +51,7 @@ auto message_deserializer_success_checker (message_type & message_original) -> v
 		ASSERT_EQ (*deserialized_bytes, *original_bytes);
 	});
 	// This is a sanity test, to ensure the successful deserialization case passes.
-	ASSERT_EQ (message_deserializer->status, nano::transport::message_deserializer::parse_status::success);
+	ASSERT_EQ (message_deserializer->status, nano::transport::parse_status::success);
 }
 
 TEST (message_deserializer, exact_confirm_ack)

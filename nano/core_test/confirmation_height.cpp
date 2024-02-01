@@ -1,11 +1,10 @@
+#include <nano/lib/logging.hpp>
 #include <nano/node/election.hpp>
 #include <nano/node/make_store.hpp>
 #include <nano/test_common/system.hpp>
 #include <nano/test_common/testutil.hpp>
 
 #include <gtest/gtest.h>
-
-#include <boost/format.hpp>
 
 using namespace std::chrono_literals;
 
@@ -62,9 +61,8 @@ TEST (confirmation_height, single)
 		ASSERT_EQ (nano::dev::genesis->hash (), confirmation_height_info.frontier);
 
 		node->process_active (send1);
-		node->block_processor.flush ();
-
-		ASSERT_TIMELY (10s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out) == 1);
+		ASSERT_TIMELY (5s, nano::test::exists (*node, { send1 }));
+		ASSERT_TIMELY_EQ (10s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out), 1);
 
 		{
 			auto transaction = node->store.tx_begin_write ();
@@ -246,7 +244,7 @@ TEST (confirmation_height, multiple_accounts)
 		ASSERT_NE (nullptr, election);
 		election->force_confirm ();
 
-		ASSERT_TIMELY (10s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out) == 10);
+		ASSERT_TIMELY_EQ (10s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out), 10);
 
 		nano::confirmation_height_info confirmation_height_info;
 		auto & store = node->store;
@@ -411,7 +409,7 @@ TEST (confirmation_height, gap_bootstrap)
 		// Now complete the chain where the block comes in on the bootstrap network.
 		node1.block_processor.add (open1);
 
-		ASSERT_TIMELY (5s, node1.unchecked.count () == 0);
+		ASSERT_TIMELY_EQ (5s, node1.unchecked.count (), 0);
 		// Confirmation height should be unchanged and unchecked should now be 0
 		{
 			auto transaction = node1.store.tx_begin_read ();
@@ -515,14 +513,16 @@ TEST (confirmation_height, gap_live)
 		node->block_processor.add (send1);
 		node->block_processor.add (send2);
 		node->block_processor.add (send3);
+		// node->block_processor.add (open1); Witheld for test
 		node->block_processor.add (receive1);
-		node->block_processor.flush ();
+		ASSERT_TIMELY (5s, nano::test::exists (*node, { send1, send2, send3 }));
+		ASSERT_TIMELY (5s, node->unchecked.exists ({ open1->hash (), receive1->hash () }));
 
 		add_callback_stats (*node);
 
 		// Receive 2 comes in on the live network, however the chain has not been finished so it gets added to unchecked
 		node->process_active (receive2);
-		node->block_processor.flush ();
+		ASSERT_TIMELY (5s, node->unchecked.exists ({ receive1->hash (), receive2->hash () }));
 
 		// Confirmation heights should not be updated
 		{
@@ -535,13 +535,12 @@ TEST (confirmation_height, gap_live)
 
 		// Vote and confirm all existing blocks
 		nano::test::start_election (system, *node, send1->hash ());
-		ASSERT_TIMELY (10s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out) == 3);
+		ASSERT_TIMELY_EQ (10s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out), 3);
 
 		// Now complete the chain where the block comes in on the live network
 		node->process_active (open1);
-		node->block_processor.flush ();
 
-		ASSERT_TIMELY (10s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out) == 6);
+		ASSERT_TIMELY_EQ (10s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out), 6);
 
 		// This should confirm the open block and the source of the receive blocks
 		auto transaction = node->store.tx_begin_read ();
@@ -693,7 +692,7 @@ TEST (confirmation_height, send_receive_between_2_accounts)
 		ASSERT_NE (nullptr, election);
 		election->force_confirm ();
 
-		ASSERT_TIMELY (10s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out) == 10);
+		ASSERT_TIMELY_EQ (10s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out), 10);
 
 		auto transaction (node->store.tx_begin_read ());
 		ASSERT_TRUE (node->ledger.block_confirmed (transaction, receive4->hash ()));
@@ -810,7 +809,7 @@ TEST (confirmation_height, send_receive_self)
 		ASSERT_NE (nullptr, election);
 		election->force_confirm ();
 
-		ASSERT_TIMELY (5s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out) == 6);
+		ASSERT_TIMELY_EQ (5s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out), 6);
 
 		auto transaction (node->store.tx_begin_read ());
 		ASSERT_TRUE (node->ledger.block_confirmed (transaction, receive3->hash ()));
@@ -1055,7 +1054,7 @@ TEST (confirmation_height, all_block_types)
 		ASSERT_NE (nullptr, election);
 		election->force_confirm ();
 
-		ASSERT_TIMELY (5s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out) == 15);
+		ASSERT_TIMELY_EQ (5s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out), 15);
 
 		auto transaction (node->store.tx_begin_read ());
 		ASSERT_TRUE (node->ledger.block_confirmed (transaction, state_send2->hash ()));
@@ -1138,7 +1137,7 @@ TEST (confirmation_height, conflict_rollback_cemented)
 		// node2 already has send2 forced confirmed whilst node1 should have confirmed send1 and therefore we have a cemented fork on node2
 		// and node2 should print an error message on the log that it cannot rollback send2 because it is already cemented
 		[[maybe_unused]] size_t count = 0;
-		ASSERT_TIMELY (5s, 1 == (count = node1->stats.count (nano::stat::type::ledger, nano::stat::detail::rollback_failed)));
+		ASSERT_TIMELY_EQ (5s, 1, (count = node1->stats.count (nano::stat::type::ledger, nano::stat::detail::rollback_failed)));
 		ASSERT_TRUE (nano::test::confirmed (*node1, { fork1a->hash () })); // fork1a should still remain after the rollback failed event
 	};
 
@@ -1159,8 +1158,7 @@ TEST (confirmation_heightDeathTest, rollback_added_block)
 	// valgrind can be noisy with death tests
 	if (!nano::running_within_valgrind ())
 	{
-		nano::logger_mt logger;
-		nano::logging logging;
+		nano::logger logger;
 		auto path (nano::unique_path ());
 		auto store = nano::make_store (logger, path, nano::dev::constants);
 		ASSERT_TRUE (!store->init_error ());
@@ -1186,13 +1184,13 @@ TEST (confirmation_heightDeathTest, rollback_added_block)
 		uint64_t batch_write_size = 2048;
 		std::atomic<bool> stopped{ false };
 		nano::confirmation_height_unbounded unbounded_processor (
-		ledger, write_database_queue, 10ms, logging, logger, stopped, batch_write_size, [] (auto const &) {}, [] (auto const &) {}, [] () { return 0; });
+		ledger, write_database_queue, 10ms, logger, stopped, batch_write_size, [] (auto const &) {}, [] (auto const &) {}, [] () { return 0; });
 
 		// Processing a block which doesn't exist should bail
 		ASSERT_DEATH_IF_SUPPORTED (unbounded_processor.process (send), "");
 
 		nano::confirmation_height_bounded bounded_processor (
-		ledger, write_database_queue, 10ms, logging, logger, stopped, batch_write_size, [] (auto const &) {}, [] (auto const &) {}, [] () { return 0; });
+		ledger, write_database_queue, 10ms, logger, stopped, batch_write_size, [] (auto const &) {}, [] (auto const &) {}, [] () { return 0; });
 		// Processing a block which doesn't exist should bail
 		ASSERT_DEATH_IF_SUPPORTED (bounded_processor.process (send), "");
 	}
@@ -1222,8 +1220,7 @@ TEST (confirmation_height, observers)
 		add_callback_stats (*node1);
 
 		node1->process_active (send1);
-		node1->block_processor.flush ();
-		ASSERT_TIMELY (10s, node1->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out) == 1);
+		ASSERT_TIMELY_EQ (10s, node1->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out), 1);
 		auto transaction = node1->store.tx_begin_read ();
 		ASSERT_TRUE (node1->ledger.block_confirmed (transaction, send1->hash ()));
 		ASSERT_EQ (1, node1->stats.count (nano::stat::type::confirmation_height, nano::stat::detail::blocks_confirmed, nano::stat::dir::in));
@@ -1251,8 +1248,7 @@ TEST (confirmation_heightDeathTest, modified_chain)
 	// valgrind can be noisy with death tests
 	if (!nano::running_within_valgrind ())
 	{
-		nano::logging logging;
-		nano::logger_mt logger;
+		nano::logger logger;
 		auto path (nano::unique_path ());
 		auto store = nano::make_store (logger, path, nano::dev::constants);
 		ASSERT_TRUE (!store->init_error ());
@@ -1279,7 +1275,7 @@ TEST (confirmation_heightDeathTest, modified_chain)
 		uint64_t batch_write_size = 2048;
 		std::atomic<bool> stopped{ false };
 		nano::confirmation_height_bounded bounded_processor (
-		ledger, write_database_queue, 10ms, logging, logger, stopped, batch_write_size, [] (auto const &) {}, [] (auto const &) {}, [] () { return 0; });
+		ledger, write_database_queue, 10ms, logger, stopped, batch_write_size, [] (auto const &) {}, [] (auto const &) {}, [] () { return 0; });
 
 		{
 			// This reads the blocks in the account, but prevents any writes from occuring yet
@@ -1298,7 +1294,7 @@ TEST (confirmation_heightDeathTest, modified_chain)
 		store->confirmation_height.put (store->tx_begin_write (), nano::dev::genesis->account (), { 1, nano::dev::genesis->hash () });
 
 		nano::confirmation_height_unbounded unbounded_processor (
-		ledger, write_database_queue, 10ms, logging, logger, stopped, batch_write_size, [] (auto const &) {}, [] (auto const &) {}, [] () { return 0; });
+		ledger, write_database_queue, 10ms, logger, stopped, batch_write_size, [] (auto const &) {}, [] (auto const &) {}, [] () { return 0; });
 
 		{
 			// This reads the blocks in the account, but prevents any writes from occuring yet
@@ -1329,8 +1325,7 @@ TEST (confirmation_heightDeathTest, modified_chain_account_removed)
 	// valgrind can be noisy with death tests
 	if (!nano::running_within_valgrind ())
 	{
-		nano::logging logging;
-		nano::logger_mt logger;
+		nano::logger logger;
 		auto path (nano::unique_path ());
 		auto store = nano::make_store (logger, path, nano::dev::constants);
 		ASSERT_TRUE (!store->init_error ());
@@ -1368,7 +1363,7 @@ TEST (confirmation_heightDeathTest, modified_chain_account_removed)
 		uint64_t batch_write_size = 2048;
 		std::atomic<bool> stopped{ false };
 		nano::confirmation_height_unbounded unbounded_processor (
-		ledger, write_database_queue, 10ms, logging, logger, stopped, batch_write_size, [] (auto const &) {}, [] (auto const &) {}, [] () { return 0; });
+		ledger, write_database_queue, 10ms, logger, stopped, batch_write_size, [] (auto const &) {}, [] (auto const &) {}, [] () { return 0; });
 
 		{
 			// This reads the blocks in the account, but prevents any writes from occuring yet
@@ -1388,7 +1383,7 @@ TEST (confirmation_heightDeathTest, modified_chain_account_removed)
 		store->confirmation_height.put (store->tx_begin_write (), nano::dev::genesis->account (), { 1, nano::dev::genesis->hash () });
 
 		nano::confirmation_height_bounded bounded_processor (
-		ledger, write_database_queue, 10ms, logging, logger, stopped, batch_write_size, [] (auto const &) {}, [] (auto const &) {}, [] () { return 0; });
+		ledger, write_database_queue, 10ms, logger, stopped, batch_write_size, [] (auto const &) {}, [] (auto const &) {}, [] () { return 0; });
 
 		{
 			// This reads the blocks in the account, but prevents any writes from occuring yet
@@ -1502,19 +1497,15 @@ TEST (confirmation_height, callback_confirmed_history)
 		add_callback_stats (*node);
 
 		node->process_active (send1);
-		ASSERT_NE (nano::test::start_election (system, *node, send1->hash ()), nullptr);
+		std::shared_ptr<nano::election> election;
+		ASSERT_TIMELY (5s, election = nano::test::start_election (system, *node, send1->hash ()));
 		{
-			node->process_active (send);
-			node->block_processor.flush ();
-
 			// The write guard prevents the confirmation height processor doing any writes
 			auto write_guard = node->write_database_queue.wait (nano::writer::testing);
 
 			// Confirm send1
-			auto election = node->active.election (send1->qualified_root ());
-			ASSERT_NE (nullptr, election);
 			election->force_confirm ();
-			ASSERT_TIMELY (10s, node->active.size () == 0);
+			ASSERT_TIMELY_EQ (10s, node->active.size (), 0);
 			ASSERT_EQ (0, node->active.recently_cemented.list ().size ());
 			ASSERT_TRUE (node->active.empty ());
 
@@ -1532,8 +1523,8 @@ TEST (confirmation_height, callback_confirmed_history)
 		auto transaction = node->store.tx_begin_read ();
 		ASSERT_TRUE (node->ledger.block_confirmed (transaction, send->hash ()));
 
-		ASSERT_TIMELY (10s, node->active.size () == 0);
-		ASSERT_TIMELY (10s, node->stats.count (nano::stat::type::confirmation_observer, nano::stat::detail::active_quorum, nano::stat::dir::out) == 1);
+		ASSERT_TIMELY_EQ (10s, node->active.size (), 0);
+		ASSERT_TIMELY_EQ (10s, node->stats.count (nano::stat::type::confirmation_observer, nano::stat::detail::active_quorum, nano::stat::dir::out), 1);
 
 		ASSERT_EQ (1, node->active.recently_cemented.list ().size ());
 		ASSERT_TRUE (node->active.empty ());
@@ -1609,7 +1600,7 @@ TEST (confirmation_height, dependent_election)
 		ASSERT_NE (nullptr, election);
 		election->force_confirm ();
 
-		ASSERT_TIMELY (5s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out) == 3);
+		ASSERT_TIMELY_EQ (5s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out), 3);
 
 		ASSERT_EQ (1, node->stats.count (nano::stat::type::confirmation_observer, nano::stat::detail::active_quorum, nano::stat::dir::out));
 		ASSERT_EQ (1, node->stats.count (nano::stat::type::confirmation_observer, nano::stat::detail::active_conf_height, nano::stat::dir::out));
@@ -1762,7 +1753,7 @@ TEST (confirmation_height, cemented_gap_below_receive)
 		auto election = nano::test::start_election (system, *node, open1->hash ());
 		ASSERT_NE (nullptr, election);
 		election->force_confirm ();
-		ASSERT_TIMELY (5s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out) == 10);
+		ASSERT_TIMELY_EQ (5s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out), 10);
 
 		auto transaction = node->store.tx_begin_read ();
 		ASSERT_TRUE (node->ledger.block_confirmed (transaction, open1->hash ()));
@@ -1927,7 +1918,7 @@ TEST (confirmation_height, cemented_gap_below_no_cache)
 		auto election = nano::test::start_election (system, *node, open1->hash ());
 		ASSERT_NE (nullptr, election);
 		election->force_confirm ();
-		ASSERT_TIMELY (5s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out) == 6);
+		ASSERT_TIMELY_EQ (5s, node->stats.count (nano::stat::type::http_callback, nano::stat::detail::http_callback, nano::stat::dir::out), 6);
 
 		auto transaction = node->store.tx_begin_read ();
 		ASSERT_TRUE (node->ledger.block_confirmed (transaction, open1->hash ()));
@@ -1990,7 +1981,7 @@ TEST (confirmation_height, election_winner_details_clearing)
 
 		node->process_confirmed (nano::election_status{ send2 });
 		ASSERT_TIMELY (5s, node->block_confirmed (send2->hash ()));
-		ASSERT_TIMELY (5s, 1 == node->stats.count (nano::stat::type::confirmation_observer, nano::stat::detail::inactive_conf_height, nano::stat::dir::out));
+		ASSERT_TIMELY_EQ (5s, 1, node->stats.count (nano::stat::type::confirmation_observer, nano::stat::detail::inactive_conf_height, nano::stat::dir::out));
 
 		node->process_confirmed (nano::election_status{ send3 });
 		ASSERT_TIMELY (5s, node->block_confirmed (send3->hash ()));
@@ -1998,7 +1989,7 @@ TEST (confirmation_height, election_winner_details_clearing)
 		// Add an already cemented block with fake election details. It should get removed
 		node->active.add_election_winner_details (send3->hash (), nullptr);
 		node->confirmation_height_processor.add (send3);
-		ASSERT_TIMELY (10s, node->active.election_winner_details_size () == 0);
+		ASSERT_TIMELY_EQ (10s, node->active.election_winner_details_size (), 0);
 		ASSERT_EQ (4, node->ledger.cache.cemented_count);
 
 		EXPECT_EQ (1, node->stats.count (nano::stat::type::confirmation_observer, nano::stat::detail::inactive_conf_height, nano::stat::dir::out));
@@ -2041,7 +2032,7 @@ TEST (confirmation_height, unbounded_block_cache_iteration)
 		// Don't test this in rocksdb mode
 		GTEST_SKIP ();
 	}
-	nano::logger_mt logger;
+	nano::logger logger;
 	auto path (nano::unique_path ());
 	auto store = nano::make_store (logger, path, nano::dev::constants);
 	ASSERT_TRUE (!store->init_error ());
@@ -2050,7 +2041,6 @@ TEST (confirmation_height, unbounded_block_cache_iteration)
 	nano::write_database_queue write_database_queue (false);
 	boost::latch initialized_latch{ 0 };
 	nano::work_pool pool{ nano::dev::network_params.network, std::numeric_limits<unsigned>::max () };
-	nano::logging logging;
 	nano::keypair key1;
 	nano::block_builder builder;
 	auto send = builder
@@ -2076,7 +2066,7 @@ TEST (confirmation_height, unbounded_block_cache_iteration)
 		ASSERT_EQ (nano::process_result::progress, ledger.process (transaction, *send1).code);
 	}
 
-	nano::confirmation_height_processor confirmation_height_processor (ledger, write_database_queue, 10ms, logging, logger, initialized_latch, nano::confirmation_height_mode::unbounded);
+	nano::confirmation_height_processor confirmation_height_processor (ledger, write_database_queue, 10ms, logger, initialized_latch, nano::confirmation_height_mode::unbounded);
 	nano::timer<> timer;
 	timer.start ();
 	{
@@ -2105,8 +2095,7 @@ TEST (confirmation_height, unbounded_block_cache_iteration)
 
 TEST (confirmation_height, pruned_source)
 {
-	nano::logger_mt logger;
-	nano::logging logging;
+	nano::logger logger;
 	auto path (nano::unique_path ());
 	auto store = nano::make_store (logger, path, nano::dev::constants);
 	ASSERT_TRUE (!store->init_error ());
@@ -2180,7 +2169,7 @@ TEST (confirmation_height, pruned_source)
 	std::atomic<bool> stopped{ false };
 	bool first_time{ true };
 	nano::confirmation_height_bounded bounded_processor (
-	ledger, write_database_queue, 10ms, logging, logger, stopped, batch_write_size, [&] (auto const & cemented_blocks_a) {
+	ledger, write_database_queue, 10ms, logger, stopped, batch_write_size, [&] (auto const & cemented_blocks_a) {
 		if (first_time)
 		{
 			// Prune the send

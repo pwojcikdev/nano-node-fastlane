@@ -1,6 +1,7 @@
 #pragma once
 
 #include <nano/lib/blocks.hpp>
+#include <nano/lib/logging.hpp>
 #include <nano/node/blocking_observer.hpp>
 #include <nano/secure/common.hpp>
 
@@ -28,7 +29,6 @@ class block_processor final
 public:
 	explicit block_processor (nano::node &, nano::write_database_queue &);
 	void stop ();
-	void flush ();
 	std::size_t size ();
 	bool full ();
 	bool half_full ();

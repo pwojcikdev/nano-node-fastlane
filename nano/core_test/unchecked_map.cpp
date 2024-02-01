@@ -1,5 +1,4 @@
 #include <nano/lib/blockbuilders.hpp>
-#include <nano/lib/logger_mt.hpp>
 #include <nano/lib/stats.hpp>
 #include <nano/node/unchecked_map.hpp>
 #include <nano/secure/common.hpp>
@@ -15,11 +14,13 @@ using namespace std::chrono_literals;
 
 namespace
 {
+unsigned max_unchecked_blocks = 65536;
+
 class context
 {
 public:
 	context () :
-		unchecked{ stats, false }
+		unchecked{ max_unchecked_blocks, stats, false }
 	{
 	}
 	nano::stats stats;
@@ -55,7 +56,7 @@ TEST (unchecked_map, put_one)
 TEST (block_store, one_bootstrap)
 {
 	nano::test::system system{};
-	nano::unchecked_map unchecked{ system.stats, false };
+	nano::unchecked_map unchecked{ max_unchecked_blocks, system.stats, false };
 	nano::block_builder builder;
 	auto block1 = builder
 				  .send ()
@@ -88,7 +89,7 @@ TEST (block_store, one_bootstrap)
 TEST (unchecked, simple)
 {
 	nano::test::system system{};
-	nano::unchecked_map unchecked{ system.stats, false };
+	nano::unchecked_map unchecked{ max_unchecked_blocks, system.stats, false };
 	nano::block_builder builder;
 	auto block = builder
 				 .send ()
@@ -129,7 +130,7 @@ TEST (unchecked, multiple)
 		// Don't test this in rocksdb mode
 		GTEST_SKIP ();
 	}
-	nano::unchecked_map unchecked{ system.stats, false };
+	nano::unchecked_map unchecked{ max_unchecked_blocks, system.stats, false };
 	nano::block_builder builder;
 	auto block = builder
 				 .send ()
@@ -159,7 +160,7 @@ TEST (unchecked, multiple)
 TEST (unchecked, double_put)
 {
 	nano::test::system system{};
-	nano::unchecked_map unchecked{ system.stats, false };
+	nano::unchecked_map unchecked{ max_unchecked_blocks, system.stats, false };
 	nano::block_builder builder;
 	auto block = builder
 				 .send ()
@@ -190,7 +191,7 @@ TEST (unchecked, double_put)
 TEST (unchecked, multiple_get)
 {
 	nano::test::system system{};
-	nano::unchecked_map unchecked{ system.stats, false };
+	nano::unchecked_map unchecked{ max_unchecked_blocks, system.stats, false };
 	// Instantiates three blocks
 	nano::block_builder builder;
 	auto block1 = builder
@@ -238,7 +239,7 @@ TEST (unchecked, multiple_get)
 	};
 
 	// Waits for the blocks to get saved in the database
-	ASSERT_TIMELY (5s, 8 == count_unchecked_blocks_one_by_one ());
+	ASSERT_TIMELY_EQ (5s, 8, count_unchecked_blocks_one_by_one ());
 
 	std::vector<nano::block_hash> unchecked1;
 	// Asserts the entries will be found for the provided key
