@@ -291,7 +291,7 @@ nano::process_return nano::block_processor::process_one (store::write_transactio
 	node.logger.trace (nano::log::type::blockprocessor, nano::log::detail::block_processed,
 	nano::log::arg{ "result", result.code },
 	nano::log::arg{ "source", context.source },
-	nano::log::arg{ "arrival", context.arrival.time_since_epoch ().count () },
+	nano::log::arg{ "arrival", nano::log::microseconds (context.arrival) },
 	nano::log::arg{ "forced", forced_a },
 	nano::log::arg{ "block", block });
 
